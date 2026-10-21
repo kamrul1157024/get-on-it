@@ -92,6 +92,19 @@ void main() {
     );
   });
 
+  testWidgets('reminders: approval, plan, done, pause, snooze, goal menu', (tester) async {
+    final fakes = await start(tester, clock: TestClock(DateTime(2026, 10, 21, 9)));
+    await remindersFlow(tester, fakes);
+    await stop(tester);
+  });
+
+  testWidgets('alarms: strict challenge, re-ring, emergency exit, snooze', (tester) async {
+    final clock = TestClock(DateTime(2026, 10, 21, 9));
+    final fakes = await start(tester, clock: clock);
+    await alarmFlow(tester, fakes, advance: (d) => clock.now = clock.now.add(d));
+    await stop(tester);
+  });
+
   testWidgets('a shared plan opens the import preview', (tester) async {
     const channel = MethodChannel('app.getonit/intents');
     // Read before start(), so the asset cache from the last test must go first.

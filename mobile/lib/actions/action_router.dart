@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app/providers.dart';
 import '../core/events/goal_event.dart';
+import '../data/repository.dart';
 import '../engines/engine.dart';
 import '../features/goal/goal_screen.dart';
 import '../features/player/player_screen.dart';
@@ -115,31 +116,9 @@ class ActionRouter {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// "Done today" means something different for each engine.
   Future<void> _completeToday(String goalId) async {
     final view = ref.read(goalViewProvider(goalId));
-    if (view == null) return;
-    final repo = ref.read(repositoryProvider);
-    final s = view.state;
-    switch (s['mode'] ?? view.template?.engine) {
-      case 'check':
-        if (s['avoid'] != true) await repo.addEvent(goalId, EventType.check, {'checked': true});
-      case 'count':
-        final left = ((s['target'] as num? ?? 0) - (s['count'] as num? ?? 0)).toInt();
-        if (left > 0) await repo.addEvent(goalId, EventType.countDelta, {'delta': left});
-      case 'checklist':
-        for (final step in (s['steps'] as List? ?? const []).whereType<Map>()) {
-          if (step['done'] != true) {
-            await repo.addEvent(goalId, EventType.stepDone, {'step': step['id'], 'done': true});
-          }
-        }
-      case 'page_range':
-        final end = (s['today'] as Map?)?['endPage'];
-        if (end is int) await repo.addEvent(goalId, EventType.pageReached, {'page': end});
-      case 'video_series':
-        final next = (s['next'] as Map?)?['id'];
-        if (next is String) await repo.addEvent(goalId, EventType.itemDone, {'item': next, 'done': true});
-    }
+    if (view != null) await completeToday(ref.read(repositoryProvider), view);
   }
 
   Future<void> _toggle(String goalId, Map<String, Object?> params) async {
@@ -169,4 +148,61 @@ class ActionRouter {
       await repo.addEvent(goalId, EventType.check, {'checked': s['checked'] != true});
     }
   }
+}
+
+/// "Done today" means something different for each engine. Used by the
+/// mark_done action and by the reminder "Done" button.
+Future<void> completeToday(Repository repo, GoalView view) async {
+  final goalId = view.goal.id;
+  final s = view.state;
+  switch (s['mode'] ?? view.template?.engine) {
+    case 'check':
+      if (s['avoid'] != true) await repo.addEvent(goalId, EventType.check, {'checked': true});
+    case 'count':
+      final left = ((s['target'] as num? ?? 0) - (s['count'] as num? ?? 0)).toInt();
+      if (left > 0) await repo.addEvent(goalId, EventType.countDelta, {'delta': left});
+    case 'checklist':
+      for (final step in (s['steps'] as List? ?? const []).whereType<Map>()) {
+        if (step['done'] != true) {
+          await repo.addEvent(goalId, EventType.stepDone, {'step': step['id'], 'done': true});
+        }
+      }
+    case 'page_range':
+      final end = (s['today'] as Map?)?['endPage'];
+      if (end is int) await repo.addEvent(goalId, EventType.pageReached, {'page': end});
+    case 'video_series':
+      final next = (s['next'] as Map?)?['id'];
+      if (next is String) await repo.addEvent(goalId, EventType.itemDone, {'item': next, 'done': true});
+  }
+}
+
+/// The one action that starts today's work for a goal: the next video, today's
+/// pages, or the goal screen. Used by alarms and nudges.
+Map<String, Object?> startWorkAction(GoalView view) {
+  final s = view.state;
+  final id = view.goal.id;
+  final next = s['next'] as Map?;
+  if (next != null && next['isVideo'] == true) {
+    return {
+      'type': 'open_video',
+      'params': {
+        'provider': 'youtube',
+        'videoId': next['videoId'],
+        'startSec': next['positionSec'],
+        'goalId': id,
+        'itemId': next['id'],
+        'embeddable': next['embeddable'],
+      },
+    };
+  }
+  if (s['canOpen'] == true) {
+    return {
+      'type': 'open_pdf_page',
+      'params': {'documentId': id, 'page': (s['today'] as Map?)?['startPage']},
+    };
+  }
+  return {
+    'type': 'open_goal',
+    'params': {'goalId': id},
+  };
 }

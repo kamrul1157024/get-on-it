@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:getonit/core/schema/documents.dart';
+import 'package:getonit/features/reminders/gateway.dart';
+import 'package:getonit/features/reminders/planner.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
@@ -21,12 +24,13 @@ void main() {
     WidgetTester tester, {
     Future<String?> Function(String)? pdfPicker,
     bool realPlayer = false,
+    TestClock? clock,
   }) async {
     rootBundle.clear();
     final db = memoryDatabase();
     addTearDown(db.close);
     final fakes = Fakes();
-    await tester.pumpWidget(buildTestApp(db: db, pdfPicker: pdfPicker, fakes: realPlayer ? null : fakes));
+    await tester.pumpWidget(buildTestApp(db: db, pdfPicker: pdfPicker, fakes: realPlayer ? null : fakes, clock: clock));
     await waitFor(tester, find.text('No goals yet'));
     return fakes;
   }
@@ -80,6 +84,59 @@ void main() {
           }
         },
       ),
+    );
+  });
+
+  testWidgets('reminders: approval, plan, done, pause, snooze, goal menu', (tester) async {
+    final fakes = await start(tester, clock: TestClock(DateTime(2026, 10, 21, 9)));
+    await remindersFlow(tester, fakes);
+    await stop(tester);
+  });
+
+  testWidgets('alarms: strict challenge, re-ring, emergency exit, snooze', (tester) async {
+    final clock = TestClock(DateTime(2026, 10, 21, 9));
+    final fakes = await start(tester, clock: clock);
+    await alarmFlow(tester, fakes, advance: (d) => clock.now = clock.now.add(d));
+    await stop(tester);
+  });
+
+  testWidgets('the real notification system schedules and cancels a reminder', (tester) async {
+    final gw = LocalNotificationsGateway();
+    await gw.init((_, _) {});
+    final goal = GoalDoc({
+      'kind': 'goal',
+      'schemaVersion': '1.0',
+      'id': 'e2e-reminder',
+      'template': 'habit@1',
+      'title': 'E2E reminder',
+      'reminders': {'preset': 'strict', 'time': '19:00'},
+      'data': {'mode': 'check'},
+    });
+    final steps = ladderOf(goal);
+    final at = DateTime.now().add(const Duration(minutes: 30));
+    for (var i = 0; i < steps.length; i++) {
+      await gw.schedule(
+        PlannedReminder(
+          id: 900000 + i,
+          goalId: goal.id,
+          day: 0,
+          minuteOfDay: 0,
+          step: steps[i],
+          title: 'E2E reminder',
+          body: 'level ${steps[i].level.wire}',
+        ),
+        at: at.add(Duration(minutes: i)),
+      );
+    }
+    final pending = await gw.pendingIds();
+    expect(pending, containsAll([900000, 900001, 900002, 900003]), reason: 'all four levels are accepted by Android');
+    for (var i = 0; i < steps.length; i++) {
+      await gw.cancel(900000 + i);
+    }
+    expect((await gw.pendingIds()).intersection({900000, 900001, 900002, 900003}), isEmpty);
+    final perms = await gw.permissions();
+    debugPrint(
+      'permissions: notifications=${perms.notifications} exact=${perms.exactAlarms} fullScreen=${perms.fullScreen}',
     );
   });
 

@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:getonit/features/player/video_backend.dart';
+import 'package:getonit/features/reminders/planner.dart';
+import 'package:getonit/features/reminders/reminders_controller.dart';
 
 import 'app_harness.dart';
 
@@ -41,7 +43,16 @@ Future<void> settle(WidgetTester tester) async {
   );
 }
 
+/// Scrolls the first scrollable until [f] is built, for lazy lists.
+Future<void> _reveal(WidgetTester tester, Finder f) async {
+  if (f.evaluate().isNotEmpty) return;
+  final scrollable = find.byType(Scrollable);
+  if (scrollable.evaluate().isEmpty) return;
+  await tester.scrollUntilVisible(f, 200, scrollable: scrollable.first, maxScrolls: 30);
+}
+
 Future<void> tapText(WidgetTester tester, String text) async {
+  await _reveal(tester, find.text(text));
   final f = find.text(text).first;
   await tester.ensureVisible(f);
   await tester.pumpAndSettle();
@@ -50,6 +61,7 @@ Future<void> tapText(WidgetTester tester, String text) async {
 }
 
 Future<void> tapKey(WidgetTester tester, String key) async {
+  await _reveal(tester, find.byKey(ValueKey(key)));
   final f = find.byKey(ValueKey(key)).first;
   await tester.ensureVisible(f);
   await tester.pumpAndSettle();
@@ -396,6 +408,8 @@ Future<void> driveFlow(WidgetTester tester, Fakes fakes, {required Future<void> 
   Future<void> openSettings() async {
     await tester.tap(find.byTooltip('Settings'));
     await settle(tester);
+    await _reveal(tester, find.byKey(const ValueKey('drive-backup-buttons')));
+    await tester.pumpAndSettle();
   }
 
   await openSettings();
@@ -443,4 +457,179 @@ Future<void> driveFlow(WidgetTester tester, Fakes fakes, {required Future<void> 
   expect(find.text('Connect Google Drive'), findsOneWidget);
   expect(fakes.driveAccount.signedIn, false);
   await goBack(tester);
+}
+
+const _strictHabit = {
+  'kind': 'goal',
+  'schemaVersion': '1.0',
+  'id': 'stretch',
+  'template': 'habit@1',
+  'title': 'Stretch',
+  'icon': '🤸',
+  'reminders': {'preset': 'strict', 'time': '19:00'},
+  'data': {'mode': 'check'},
+};
+
+/// Reminders: approval in the import preview, the plan in the notification
+/// system, today done, pause and resume, permissions, the goal menu switch,
+/// and the Done and Snooze buttons. Expects the clock at 09:00.
+Future<void> remindersFlow(WidgetTester tester, Fakes fakes) async {
+  final n = fakes.notifications;
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  expect(find.text('Turn on the proposed reminders'), findsOneWidget);
+  expect(find.textContaining('19:00 notification → 19:30 sticky → 20:00 alarm → 20:30 strict alarm'), findsOneWidget);
+  await tapKey(tester, 'import-confirm');
+  await settle(tester);
+  expect(n.scheduled, isEmpty, reason: 'imported reminders stay off until the user turns them on');
+
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  await tapKey(tester, 'import-reminders:stretch');
+  await tapKey(tester, 'import-confirm');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  expect(n.scheduled, hasLength(28), reason: '4 steps on each of 7 days');
+
+  Future<void> openSettings() async {
+    await tester.tap(find.byTooltip('Settings'));
+    await settle(tester);
+  }
+
+  await openSettings();
+  expect(find.text('28 reminders planned for the next 7 days'), findsOneWidget);
+  // Permissions: shown as missing, then allowed.
+  expect(find.descendant(of: find.byKey(const ValueKey('perm-exact')), matching: find.text('Allow')), findsOneWidget);
+  await tester.tap(find.descendant(of: find.byKey(const ValueKey('perm-exact')), matching: find.text('Allow')));
+  await settle(tester);
+  expect(find.descendant(of: find.byKey(const ValueKey('perm-exact')), matching: find.text('Allow')), findsNothing);
+  // Pause for 1 day: today's 4 go.
+  await tapKey(tester, 'pause-menu');
+  await tapText(tester, '1 day');
+  expect(find.textContaining('Paused until'), findsOneWidget);
+  expect(n.scheduled, hasLength(24));
+  await tapKey(tester, 'pause-resume');
+  expect(n.scheduled, hasLength(28));
+  await goBack(tester);
+
+  // Done today: today's remaining reminders are cancelled.
+  final today = n.reminders.map((r) => r.day).reduce((a, b) => a < b ? a : b);
+  final first = n.reminders.firstWhere((r) => r.day == today && r.level == ReminderLevel.notification);
+  n.tap(first, action: 'done');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  expect(n.reminders.where((r) => r.day == today), isEmpty);
+  expect(n.scheduled, hasLength(24));
+  expect(
+    find.descendant(of: find.byKey(const ValueKey('goal-tile:stretch')), matching: find.text('Done today')),
+    findsOneWidget,
+  );
+
+  // Snooze schedules one ring 10 minutes later, with its own id.
+  final tomorrowSticky = n.reminders.firstWhere((r) => r.day == today + 1 && r.level == ReminderLevel.sticky);
+  n.tap(tomorrowSticky, action: 'snooze');
+  await settle(tester);
+  final snoozed = n.scheduled.entries.where((e) => e.key & snoozeBit != 0).toList();
+  expect(snoozed, hasLength(1));
+
+  // A plain tap opens the goal.
+  n.tap(tomorrowSticky);
+  await settle(tester);
+  expect(find.byKey(const ValueKey('goal-menu')), findsOneWidget);
+
+  // The goal menu turns reminders off; the snoozed ring stays.
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Turn reminders off');
+  expect(n.scheduled.keys.where((id) => id & snoozeBit == 0), isEmpty);
+  await tapKey(tester, 'goal-menu');
+  expect(find.text('Turn reminders on (strict)'), findsOneWidget);
+  await tapText(tester, 'Turn reminders on (strict)');
+  expect(n.scheduled.keys.where((id) => id & snoozeBit == 0), hasLength(24));
+  await goBack(tester);
+}
+
+/// Alarms: a strict alarm cannot be closed until progress, rings again when
+/// left, ends when the task is done, and has a 10-second emergency exit. A
+/// normal alarm has Snooze and Done today.
+Future<void> alarmFlow(WidgetTester tester, Fakes fakes, {void Function(Duration)? advance}) async {
+  final n = fakes.notifications;
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  await tapKey(tester, 'import-reminders:stretch');
+  await tapKey(tester, 'import-confirm');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  final today = n.reminders.map((r) => r.day).reduce((a, b) => a < b ? a : b);
+  final strict = n.reminders.firstWhere((r) => r.day == today && r.level == ReminderLevel.strictAlarm);
+
+  // The strict alarm rings.
+  n.tap(strict);
+  await settle(tester);
+  expect(find.byKey(const ValueKey('alarm-title')), findsOneWidget);
+  expect(find.text('This alarm stops when you make progress.'), findsOneWidget);
+  expect(n.cancelled, contains(strict.id), reason: 'opening the alarm stops its sound');
+  final reRing = n.scheduled.keys.where((id) => id & snoozeBit != 0).toList();
+  expect(reRing, hasLength(1), reason: 'it rings again in 3 minutes unless there is progress');
+  expect(find.byKey(const ValueKey('alarm-dismiss')), findsNothing);
+  await tester.binding.handlePopRoute();
+  await settle(tester);
+  expect(find.byKey(const ValueKey('alarm-title')), findsOneWidget, reason: 'Back does not close a strict alarm');
+
+  // Get on it → the goal; doing the task ends the alarm.
+  await tapKey(tester, 'alarm-start');
+  expect(find.byKey(const ValueKey('goal-menu')), findsOneWidget);
+  await tapText(tester, 'Mark done');
+  await goBack(tester);
+  expect(find.text('Done for now ✓'), findsOneWidget);
+  expect(n.scheduled.keys.where((id) => id & snoozeBit != 0), isEmpty, reason: 'the re-ring is cancelled');
+  await tapKey(tester, 'alarm-close');
+  expect(find.byKey(const ValueKey('alarm-title')), findsNothing);
+
+  // Undo, so the next alarm has work to wait for. The test clock is frozen,
+  // so it moves on first: events at the same moment have no fixed order.
+  advance?.call(const Duration(minutes: 1));
+  await _undoStretch(tester);
+  advance?.call(const Duration(minutes: 1));
+
+  // Emergency exit: hold 10 seconds, then "Skip today".
+  n.tap(strict);
+  await settle(tester);
+  final hold = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('alarm-emergency'))));
+  await tester.pump(const Duration(seconds: 5));
+  await hold.up();
+  await settle(tester);
+  expect(find.text('Skip today?'), findsNothing, reason: '5 seconds is not enough');
+  final hold2 = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('alarm-emergency'))));
+  await tester.pump(const Duration(milliseconds: 600));
+  for (var i = 0; i < 11; i++) {
+    await tester.pump(const Duration(seconds: 1));
+  }
+  await hold2.up();
+  await settle(tester);
+  expect(find.text('Skip today?'), findsOneWidget);
+  await tapText(tester, 'Skip today');
+  expect(find.byKey(const ValueKey('alarm-title')), findsNothing);
+  expect(n.scheduled.keys.where((id) => id & snoozeBit != 0), isEmpty);
+
+  // A normal alarm: Snooze, then Done today.
+  final alarm = n.reminders.firstWhere((r) => r.day == today + 1 && r.level == ReminderLevel.alarm);
+  n.tap(alarm);
+  await settle(tester);
+  expect(find.text('Snooze 10 min'), findsOneWidget);
+  await tapKey(tester, 'alarm-snooze');
+  expect(find.byKey(const ValueKey('alarm-title')), findsNothing);
+  expect(n.scheduled.keys.where((id) => id & snoozeBit != 0), hasLength(1));
+  n.tap(alarm);
+  await settle(tester);
+  await tapKey(tester, 'alarm-done');
+  expect(
+    find.descendant(of: find.byKey(const ValueKey('goal-tile:stretch')), matching: find.text('Done today')),
+    findsOneWidget,
+  );
+}
+
+Future<void> _undoStretch(WidgetTester tester) async {
+  final tile = find.byKey(const ValueKey('goal-tile:stretch'));
+  await tester.ensureVisible(tile);
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: tile, matching: find.text('Done ✓')));
+  await settle(tester);
+  expect(find.descendant(of: tile, matching: find.text('Mark done')), findsOneWidget);
 }

@@ -14,6 +14,9 @@ import 'package:getonit/features/drive/drive_account.dart';
 import 'package:getonit/features/drive/drive_controller.dart';
 import 'package:getonit/features/drive/remote_store.dart';
 import 'package:getonit/features/player/video_backend.dart';
+import 'package:getonit/features/reminders/gateway.dart';
+import 'package:getonit/features/reminders/planner.dart';
+import 'package:getonit/features/reminders/reminders_controller.dart';
 
 /// A controllable clock shared by the app and the test.
 class TestClock {
@@ -79,11 +82,68 @@ class FakeDriveAccount implements DriveAccount {
   Future<void> disconnect() async => signedIn = false;
 }
 
+/// The phone's notification system, in memory.
+class FakeGateway implements NotificationGateway {
+  final scheduled = <int, (PlannedReminder, DateTime)>{};
+  final cancelled = <int>[];
+  ReminderTap? _onTap;
+  var permissionsGranted = const ReminderPermissions(notifications: false, exactAlarms: false, fullScreen: false);
+
+  /// Simulates the user tapping a reminder, or one of its buttons.
+  void tap(PlannedReminder r, {String? action}) => _onTap!(r.payload, action);
+
+  Iterable<PlannedReminder> get reminders => scheduled.values.map((e) => e.$1);
+
+  @override
+  Future<void> init(ReminderTap onTap) async => _onTap = onTap;
+
+  @override
+  Future<(String, String?)?> launchTap() async => null;
+
+  @override
+  Future<void> schedule(PlannedReminder r, {DateTime? at, bool snoozed = false}) async =>
+      scheduled[r.id] = (r, at ?? r.localTime);
+
+  @override
+  Future<void> cancel(int id) async {
+    cancelled.add(id);
+    scheduled.remove(id);
+  }
+
+  @override
+  Future<Set<int>> pendingIds() async => scheduled.keys.toSet();
+
+  @override
+  Future<ReminderPermissions> permissions() async => permissionsGranted;
+
+  @override
+  Future<void> requestNotifications() async => permissionsGranted = ReminderPermissions(
+    notifications: true,
+    exactAlarms: permissionsGranted.exactAlarms,
+    fullScreen: permissionsGranted.fullScreen,
+  );
+
+  @override
+  Future<void> requestExactAlarms() async => permissionsGranted = ReminderPermissions(
+    notifications: permissionsGranted.notifications,
+    exactAlarms: true,
+    fullScreen: permissionsGranted.fullScreen,
+  );
+
+  @override
+  Future<void> requestFullScreen() async => permissionsGranted = ReminderPermissions(
+    notifications: permissionsGranted.notifications,
+    exactAlarms: permissionsGranted.exactAlarms,
+    fullScreen: true,
+  );
+}
+
 /// Records what the app did outside itself.
 class Fakes {
   final launched = <Uri>[];
   final videos = <FakeVideo>[];
   final drive = MemoryStore();
+  final notifications = FakeGateway();
   late final driveAccount = FakeDriveAccount(drive);
 
   FakeVideo get video => videos.last;
@@ -105,6 +165,7 @@ Widget buildTestApp({
     if (fakes != null) ...[
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
+      reminderGatewayProvider.overrideWithValue(fakes.notifications),
       autoBackupDelayProvider.overrideWithValue(const Duration(seconds: 2)),
       videoBackendProvider.overrideWithValue((id, start) {
         final v = FakeVideo(id, start);

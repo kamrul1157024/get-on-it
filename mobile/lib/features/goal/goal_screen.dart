@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../render/goal_surface.dart';
+import '../reminders/planner.dart';
+import '../reminders/reminders_controller.dart';
 
 class GoalScreen extends ConsumerWidget {
   const GoalScreen({super.key, required this.goalId});
@@ -12,6 +14,7 @@ class GoalScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final view = ref.watch(goalViewProvider(goalId));
+    final remindersOn = ref.watch(settingsProvider).value?[reminderSettingKey(goalId)] == 'true';
     return Scaffold(
       appBar: AppBar(
         title: Text(view?.goal.title ?? ''),
@@ -19,6 +22,14 @@ class GoalScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             key: const ValueKey('goal-menu'),
             onSelected: (v) async {
+              if (v == 'reminders-on' || v == 'reminders-off') {
+                await ref.read(remindersProvider.notifier).setEnabled(goalId, v == 'reminders-on');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(v == 'reminders-on' ? 'Reminders on' : 'Reminders off')));
+                }
+                return;
+              }
               if (v != 'delete') return;
               final ok = await showDialog<bool>(
                 context: context,
@@ -36,7 +47,13 @@ class GoalScreen extends ConsumerWidget {
                 if (context.mounted) Navigator.of(context).pop();
               }
             },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete goal'))],
+            itemBuilder: (_) => [
+              if (view?.goal.reminders != null)
+                remindersOn
+                    ? const PopupMenuItem(value: 'reminders-off', child: Text('Turn reminders off'))
+                    : PopupMenuItem(value: 'reminders-on', child: Text('Turn reminders on (${presetOf(view!.goal)})')),
+              const PopupMenuItem(value: 'delete', child: Text('Delete goal')),
+            ],
           ),
         ],
       ),

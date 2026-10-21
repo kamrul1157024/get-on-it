@@ -6,6 +6,8 @@ import '../../app/providers.dart';
 import '../../core/schema/documents.dart';
 import '../../core/schema/validator.dart';
 import '../../data/repository.dart';
+import '../reminders/planner.dart';
+import '../reminders/reminders_controller.dart';
 
 /// Paste or receive a plan, check it, preview it, and save it. Spec §14.
 class ImportScreen extends ConsumerStatefulWidget {
@@ -31,6 +33,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   ParsedImport? _parsed;
   List<_GoalPreview> _previews = const [];
   bool _saving = false;
+
+  /// Reminders the user turned on in the preview. Off unless the user says
+  /// so: an imported plan only proposes reminders. Spec §11.5.
+  final _remindersOn = <String, bool>{};
 
   @override
   void initState() {
@@ -78,7 +84,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
     for (final g in parsed.goals) {
       await repo.saveGoal(g);
+      if (g.reminders != null && _remindersOn[g.id] == true) {
+        await repo.setSetting(reminderSettingKey(g.id), 'true');
+      }
     }
+    ref.read(remindersProvider.notifier).scheduleSync();
     if (!mounted) return;
     final n = parsed.goals.length;
     final message = n > 0
@@ -140,7 +150,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     subtitle: Text('${tpl.ref} · version ${tpl.version}'),
                   ),
                 ),
-              for (final p in _previews) _PreviewCard(p),
+              for (final p in _previews)
+                _PreviewCard(
+                  p,
+                  remindersOn: _remindersOn[p.goal.id] ?? false,
+                  onReminders: (v) => setState(() => _remindersOn[p.goal.id] = v),
+                ),
               const SizedBox(height: 12),
               FilledButton(
                 key: const ValueKey('import-confirm'),
@@ -195,9 +210,11 @@ class _Errors extends StatelessWidget {
 }
 
 class _PreviewCard extends StatelessWidget {
-  const _PreviewCard(this.p);
+  const _PreviewCard(this.p, {required this.remindersOn, required this.onReminders});
 
   final _GoalPreview p;
+  final bool remindersOn;
+  final ValueChanged<bool> onReminders;
 
   @override
   Widget build(BuildContext context) {
@@ -224,11 +241,16 @@ class _PreviewCard extends StatelessWidget {
             for (final r in p.diff.renamed) Text('✎ $r', style: t.bodySmall),
             if (reminders != null) ...[
               const SizedBox(height: 8),
-              Text(
-                'Proposed reminders: ${reminders['preset'] ?? 'custom'}'
-                '${reminders['time'] != null ? ' at ${reminders['time']}' : ''}. '
-                'Reminders are not active in this version.',
-                style: t.bodySmall,
+              SwitchListTile(
+                key: ValueKey('import-reminders:${p.goal.id}'),
+                contentPadding: EdgeInsets.zero,
+                value: remindersOn,
+                onChanged: onReminders,
+                title: const Text('Turn on the proposed reminders'),
+                subtitle: Text(
+                  [for (final s in ladderOf(p.goal)) '${clockText(s.minuteOfDay)} ${_levelName(s.level)}'].join(' → '),
+                  style: t.bodySmall,
+                ),
               ),
             ],
           ],
@@ -237,3 +259,10 @@ class _PreviewCard extends StatelessWidget {
     );
   }
 }
+
+String _levelName(ReminderLevel l) => switch (l) {
+  ReminderLevel.notification => 'notification',
+  ReminderLevel.sticky => 'sticky',
+  ReminderLevel.alarm => 'alarm',
+  ReminderLevel.strictAlarm => 'strict alarm',
+};
