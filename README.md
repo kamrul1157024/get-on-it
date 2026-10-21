@@ -10,7 +10,8 @@ Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Cl
   <tr>
     <td align="center">
       <img src="docs/demo.gif" alt="Demo: make a plan with AI, import it, track it, the widget, and a strict alarm" width="260"><br>
-      <a href="docs/demo.mp4">Watch the demo with narration (71 seconds)</a>
+      <a href="https://github.com/kamrul1157024/get-on-it/raw/main/docs/demo.mp4">▶ Play the demo with sound (71 seconds)</a><br>
+      <sub>The animation above is silent. The link plays the video with narration.</sub>
     </td>
     <td align="center">
       <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk"><img src="docs/download-qr.png" width="200" alt="QR code: download getonit.apk"></a><br>
