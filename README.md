@@ -6,11 +6,19 @@
 
 Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Claude, ChatGPT, or another) makes the plan. The app shows the plan, tracks your progress, and makes sure that you do the work.
 
-<p align="center">
-  <img src="docs/demo.gif" alt="Demo: make a plan with AI, import it, track it, the widget, and a strict alarm" width="300">
-  <br>
-  <a href="docs/demo.mp4">Watch the demo video with narration (71 seconds)</a>
-</p>
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="docs/demo.gif" alt="Demo: make a plan with AI, import it, track it, the widget, and a strict alarm" width="260"><br>
+      <a href="docs/demo.mp4">Watch the demo with narration (71 seconds)</a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk"><img src="docs/download-qr.png" width="200" alt="QR code: download getonit.apk"></a><br>
+      <b>Scan to download the app</b><br>
+      <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk">getonit.apk</a>
+    </td>
+  </tr>
+</table>
 
 ## What it does
 
@@ -90,11 +98,8 @@ codex exec --sandbox workspace-write '$getonit-planner Make a Get On It plan to 
 
 ## Install the app
 
-Scan the code with your Android phone, or open the link. It downloads `getonit.apk` from the latest release.
+Scan the QR code at the top with your Android phone, or open the link. It downloads `getonit.apk` from the latest release.
 
-<p>
-  <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk"><img src="docs/download-qr.png" width="180" alt="QR code: download getonit.apk"></a>
-</p>
 
 [Download getonit.apk](https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk)
 
