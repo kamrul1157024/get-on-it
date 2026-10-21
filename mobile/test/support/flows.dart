@@ -633,3 +633,62 @@ Future<void> _undoStretch(WidgetTester tester) async {
   await settle(tester);
   expect(find.descendant(of: tile, matching: find.text('Mark done')), findsOneWidget);
 }
+
+/// Distraction nudges: enable, today's open work goes to the service, the
+/// unlock switch, usage access, suggested apps in the picker, and open work
+/// shrinking as goals are done.
+Future<void> nudgesFlow(WidgetTester tester, Fakes fakes, {required Future<void> Function() waitPush}) async {
+  final b = fakes.nudges;
+  await tapKey(tester, 'empty-samples');
+  await tester.tap(find.byTooltip('Settings'));
+  await settle(tester);
+  await tapKey(tester, 'nudges-enabled');
+  await waitPush();
+  expect(b.last['enabled'], true);
+  final pending = (b.last['pending'] as List).cast<Map>();
+  expect(pending.map((p) => p['goalId']), ['stanford-cs229', 'atomic-habits', 'water', 'meditate']);
+  expect(pending.first['link'], 'getonit://start/stanford-cs229');
+  expect(pending.first['title'], 'Stanford CS229: Machine Learning');
+  expect(b.last['quietStartMin'], 23 * 60);
+  expect(find.text('On. 4 goals still open today.'), findsOneWidget);
+
+  await tapKey(tester, 'nudges-unlock');
+  await waitPush();
+  expect(b.last['unlock'], false);
+  await tapKey(tester, 'nudges-unlock');
+  await waitPush();
+
+  // Usage access is granted in system settings; the app reads it on return.
+  await tester.tap(
+    find.descendant(of: find.byKey(const ValueKey('nudges-usage-access')), matching: find.text('Allow')),
+  );
+  await settle(tester);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await settle(tester);
+  expect(
+    find.descendant(of: find.byKey(const ValueKey('nudges-usage-access')), matching: find.text('Allow')),
+    findsNothing,
+  );
+
+  // The plan suggested Instagram and YouTube; they come first.
+  await tapKey(tester, 'nudges-choose');
+  expect(find.text('Suggested by your plan'), findsNWidgets(2));
+  await tapKey(tester, 'app:com.instagram.android');
+  await tapKey(tester, 'apps-save');
+  await waitPush();
+  expect(find.text('Instagram (15 min)'), findsOneWidget);
+  expect(b.last['apps'], [
+    {'package': 'com.instagram.android', 'label': 'Instagram', 'thresholdMin': 15},
+  ]);
+  await goBack(tester);
+
+  // Done goals leave the list.
+  final meditate = find.byKey(const ValueKey('goal-tile:meditate'));
+  await tester.ensureVisible(meditate);
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: meditate, matching: find.text('Mark done')));
+  await settle(tester);
+  await waitPush();
+  expect((b.last['pending'] as List).map((p) => (p as Map)['goalId']), ['stanford-cs229', 'atomic-habits', 'water']);
+}

@@ -24,13 +24,22 @@ void main() {
     WidgetTester tester, {
     Future<String?> Function(String)? pdfPicker,
     bool realPlayer = false,
+    bool realNudges = false,
     TestClock? clock,
   }) async {
     rootBundle.clear();
     final db = memoryDatabase();
     addTearDown(db.close);
     final fakes = Fakes();
-    await tester.pumpWidget(buildTestApp(db: db, pdfPicker: pdfPicker, fakes: realPlayer ? null : fakes, clock: clock));
+    await tester.pumpWidget(
+      buildTestApp(
+        db: db,
+        pdfPicker: pdfPicker,
+        fakes: realPlayer ? null : fakes,
+        clock: clock,
+        realNudges: realNudges,
+      ),
+    );
     await waitFor(tester, find.text('No goals yet'));
     return fakes;
   }
@@ -140,7 +149,50 @@ void main() {
     );
   });
 
-  testWidgets('the real YouTube player opens', (tester) async {
+  testWidgets('nudges: enable, open work, unlock, usage access, apps', (tester) async {
+    await run(
+      tester,
+      (f) => nudgesFlow(
+        tester,
+        f,
+        waitPush: () async {
+          for (var i = 0; i < 6; i++) {
+            await tester.pump(const Duration(milliseconds: 200));
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+          }
+          await settle(tester);
+        },
+      ),
+    );
+  });
+
+  testWidgets('the real nudge service runs, nudges on unlock, and stops', (tester) async {
+    await start(tester, realNudges: true);
+    await tapKey(tester, 'empty-samples');
+    await tester.tap(find.byTooltip('Settings'));
+    await settle(tester);
+    await tapKey(tester, 'nudges-enabled');
+    Future<Map<String, Object?>> status() async =>
+        await systemChannel.invokeMapMethod<String, Object?>('nudgeStatus') ?? const {};
+    await waitUntil(() async => (await status())['running'] == true);
+    expect(find.text('On. 4 goals still open today.'), findsOneWidget);
+
+    final apps = await systemChannel.invokeListMethod<Map>('listApps');
+    expect(apps, isNotEmpty);
+
+    final nudge = await systemChannel.invokeMapMethod<String, Object?>('nudgeSimulate', {'trigger': 'unlock'});
+    expect(nudge?['title'], 'Stanford CS229: Machine Learning');
+    expect(nudge?['link'], 'getonit://start/stanford-cs229');
+    final again = await systemChannel.invokeMapMethod<String, Object?>('nudgeSimulate', {'trigger': 'unlock'});
+    expect(again, isNull, reason: 'at most one nudge every 2 hours');
+
+    await tapKey(tester, 'nudges-enabled');
+    await waitUntil(() async => (await status())['running'] == false);
+    await goBack(tester);
+    await stop(tester);
+  });
+
+  testWidgets('the real YouTube player opens', skip: isCi, (tester) async {
     await start(tester, realPlayer: true);
     await importPlan(tester, await embeddableCourse());
     await tester.tap(find.text('▶ Resume 0:00'));
@@ -217,6 +269,19 @@ void main() {
     expect(find.descendant(of: tile, matching: find.text('✓ Today')), findsOneWidget);
     await stop(tester);
   });
+}
+
+/// Set by the CI workflow; skips tests that need YouTube online.
+const isCi = bool.fromEnvironment('CI');
+
+/// Waits with real time passing until [check] is true.
+Future<void> waitUntil(Future<bool> Function() check, {Duration timeout = const Duration(seconds: 15)}) async {
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    if (await check()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  }
+  fail('timed out after $timeout');
 }
 
 /// Pumps with real time passing until [finder] matches.

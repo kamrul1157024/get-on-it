@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../core/schema/capabilities.dart';
 import '../../core/time/day_clock.dart';
 import '../drive/drive_controller.dart';
+import '../nudges/nudges.dart';
 import '../reminders/planner.dart';
 import '../reminders/reminders_controller.dart';
 
@@ -39,6 +40,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
           const _RemindersSection(),
+          const Divider(),
+          const _NudgesSection(),
           const Divider(),
           const _DriveSection(),
           const Divider(),
@@ -295,6 +298,123 @@ class _RemindersSection extends ConsumerWidget {
             style: t.bodySmall,
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Distraction nudges. Spec §12.
+class _NudgesSection extends ConsumerWidget {
+  const _NudgesSection();
+
+  Future<void> _chooseApps(BuildContext context, WidgetRef ref, NudgeState s) async {
+    final c = ref.read(nudgesProvider.notifier);
+    final apps = await ref.read(nudgeBridgeProvider).listApps();
+    final suggested = await c.suggestedApps();
+    if (!context.mounted) return;
+    final chosen = {for (final a in s.apps) a.package: a};
+    final result = await showDialog<Map<String, WatchedApp>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Apps to watch'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final a in [
+                  ...apps.where((a) => suggested.contains(a.package)),
+                  ...apps.where((a) => !suggested.contains(a.package)),
+                ])
+                  CheckboxListTile(
+                    key: ValueKey('app:${a.package}'),
+                    value: chosen.containsKey(a.package),
+                    title: Text(a.label),
+                    subtitle: suggested.contains(a.package) ? const Text('Suggested by your plan') : null,
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        chosen[a.package] = WatchedApp(a.package, a.label, 15);
+                      } else {
+                        chosen.remove(a.package);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            FilledButton(
+              key: const ValueKey('apps-save'),
+              onPressed: () => Navigator.pop(context, chosen),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result != null) await c.setApps(result.values.toList());
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(nudgesProvider);
+    final c = ref.read(nudgesProvider.notifier);
+    final t = Theme.of(context).textTheme;
+    return Column(
+      key: const ValueKey('nudges-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          key: const ValueKey('nudges-enabled'),
+          value: s.enabled,
+          onChanged: c.setEnabled,
+          title: Text('Distraction nudges', style: t.titleMedium),
+          subtitle: Text(
+            s.enabled
+                ? (s.running ? 'On. ${s.pending} goals still open today.' : 'Starting…')
+                : 'A short reminder of your goal when you unlock the phone or spend time in other apps.',
+            key: const ValueKey('nudges-status'),
+          ),
+        ),
+        if (s.enabled) ...[
+          SwitchListTile(
+            key: const ValueKey('nudges-unlock'),
+            value: s.unlock,
+            onChanged: c.setUnlock,
+            title: const Text('When I unlock the phone'),
+            subtitle: const Text('At most one nudge every 2 hours, and 4 a day.'),
+          ),
+          ListTile(
+            key: const ValueKey('nudges-usage-access'),
+            leading: Icon(
+              s.usageAccess ? Icons.check_circle : Icons.error_outline,
+              color: s.usageAccess ? Colors.green : Colors.orange,
+            ),
+            title: const Text('Usage access'),
+            subtitle: const Text('Needed to see time in the apps you choose. Nothing leaves the phone.'),
+            trailing: s.usageAccess
+                ? null
+                : TextButton(
+                    onPressed: () => ref.read(nudgeBridgeProvider).openUsageAccessSettings(),
+                    child: const Text('Allow'),
+                  ),
+          ),
+          ListTile(
+            key: const ValueKey('nudges-apps'),
+            title: const Text('Apps to watch'),
+            subtitle: Text(
+              s.apps.isEmpty ? 'None' : s.apps.map((a) => '${a.label} (${a.thresholdMin} min)').join(', '),
+              key: const ValueKey('nudges-apps-list'),
+            ),
+            trailing: TextButton(
+              key: const ValueKey('nudges-choose'),
+              onPressed: () => _chooseApps(context, ref, s),
+              child: const Text('Choose'),
+            ),
+          ),
+        ],
       ],
     );
   }

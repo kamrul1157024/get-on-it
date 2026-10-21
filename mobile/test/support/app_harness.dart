@@ -13,6 +13,7 @@ import 'package:getonit/data/database.dart';
 import 'package:getonit/features/drive/drive_account.dart';
 import 'package:getonit/features/drive/drive_controller.dart';
 import 'package:getonit/features/drive/remote_store.dart';
+import 'package:getonit/features/nudges/nudges.dart';
 import 'package:getonit/features/player/video_backend.dart';
 import 'package:getonit/features/reminders/gateway.dart';
 import 'package:getonit/features/reminders/planner.dart';
@@ -138,12 +139,38 @@ class FakeGateway implements NotificationGateway {
   );
 }
 
+/// The native nudge service, in memory.
+class FakeNudgeBridge implements NudgeBridge {
+  final configs = <Map<String, Object?>>[];
+  bool usageAccess = false;
+
+  Map<String, Object?> get last => configs.last;
+
+  @override
+  Future<void> configure(Map<String, Object?> config) async => configs.add(config);
+
+  @override
+  Future<({bool running, bool usageAccess})> status() async =>
+      (running: configs.isNotEmpty && last['enabled'] == true, usageAccess: usageAccess);
+
+  @override
+  Future<void> openUsageAccessSettings() async => usageAccess = true;
+
+  @override
+  Future<List<({String package, String label})>> listApps() async => const [
+    (package: 'com.android.chrome', label: 'Chrome'),
+    (package: 'com.instagram.android', label: 'Instagram'),
+    (package: 'com.google.android.youtube', label: 'YouTube'),
+  ];
+}
+
 /// Records what the app did outside itself.
 class Fakes {
   final launched = <Uri>[];
   final videos = <FakeVideo>[];
   final drive = MemoryStore();
   final notifications = FakeGateway();
+  final nudges = FakeNudgeBridge();
   late final driveAccount = FakeDriveAccount(drive);
 
   FakeVideo get video => videos.last;
@@ -157,6 +184,7 @@ Widget buildTestApp({
   Fakes? fakes,
   Future<String?> Function(String goalId)? pdfPicker,
   bool listenForIntents = false,
+  bool realNudges = false,
 }) => ProviderScope(
   overrides: [
     databaseProvider.overrideWithValue(db),
@@ -166,6 +194,7 @@ Widget buildTestApp({
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       reminderGatewayProvider.overrideWithValue(fakes.notifications),
+      if (!realNudges) nudgeBridgeProvider.overrideWithValue(fakes.nudges),
       autoBackupDelayProvider.overrideWithValue(const Duration(seconds: 2)),
       videoBackendProvider.overrideWithValue((id, start) {
         final v = FakeVideo(id, start);

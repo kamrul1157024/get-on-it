@@ -105,6 +105,43 @@ void main() {
     await stop(tester);
   });
 
+  testWidgets('nudges: enable, open work, unlock, usage access, apps', (tester) async {
+    await run(
+      tester,
+      (f) => nudgesFlow(
+        tester,
+        f,
+        waitPush: () async {
+          await tester.pump(const Duration(seconds: 1));
+          await settle(tester);
+        },
+      ),
+    );
+  });
+
+  testWidgets('links from nudges and other apps open goals and start work', (tester) async {
+    final fakes = await start(tester, listenForIntents: true);
+    await tapKey(tester, 'empty-samples');
+
+    // As MainActivity does when a link arrives while the app runs.
+    Future<void> send(String link) async {
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'app.getonit/intents',
+        const StandardMethodCodec().encodeMethodCall(MethodCall('onText', link)),
+        (_) {},
+      );
+      await settle(tester);
+    }
+
+    await send('getonit://goal/water');
+    expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
+    await goBack(tester);
+
+    await send('getonit://start/stanford-cs229');
+    expect(fakes.launched.single.toString(), 'https://www.youtube.com/watch?v=jGwO_UgTS7I&t=0s');
+    await stop(tester);
+  });
+
   testWidgets('a shared plan opens the import preview', (tester) async {
     const channel = MethodChannel('app.getonit/intents');
     // Read before start(), so the asset cache from the last test must go first.

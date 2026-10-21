@@ -18,6 +18,12 @@
     "preset": "firm",
     "time": "19:00"
   },
+  "nudges": {
+    "suggestedApps": [
+      "com.instagram.android",
+      "com.google.android.youtube"
+    ]
+  },
   "data": {
     "provider": "youtube",
     "playlistUrl": "https://www.youtube.com/playlist?list=PLoROMvodv4rMiGQp3WXShtMGgzqpfVfbU",

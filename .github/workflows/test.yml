@@ -45,6 +45,16 @@ jobs:
       - run: flutter test
         working-directory: mobile
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # JVM tests for the native nudge rules (NudgeRulesTest.kt).
+      - name: Kotlin unit tests
+        working-directory: mobile/android
+        run: ./gradlew :app:testDebugUnitTest --console=plain
+
   skill:
     name: Claude skill
     runs-on: ubuntu-latest
@@ -62,7 +72,7 @@ jobs:
   e2e:
     name: E2E (Android emulator)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
@@ -95,6 +105,13 @@ jobs:
       - run: flutter pub get
         working-directory: mobile
 
+      # Gradle, the NDK download and the native builds take most of the time
+      # on a 2-core runner. Done here, before the emulator competes for CPU;
+      # the test build below reuses the outputs.
+      - name: Build once before the emulator starts
+        run: flutter build apk --debug
+        working-directory: mobile
+
       - name: Run integration tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -106,4 +123,5 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           working-directory: mobile
-          script: flutter test integration_test -d emulator-5554
+          # CI=true skips the test that needs the real YouTube player online.
+          script: flutter test integration_test -d emulator-5554 --reporter expanded --dart-define=CI=true

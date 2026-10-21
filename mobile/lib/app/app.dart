@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/drive/drive_controller.dart';
 import '../features/goal/goal_screen.dart';
+import '../features/nudges/nudges.dart';
 import '../features/reminders/alarm_screen.dart';
 import '../features/reminders/reminders_controller.dart';
 import '../features/import/import_screen.dart';
@@ -86,17 +87,29 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
       ref.read(currentDayProvider.notifier).refresh();
       // The user may have changed a permission in system settings.
       if (_remindersStarted) ref.read(remindersProvider.notifier).refreshPermissions();
+      if (widget.startReminders) ref.read(nudgesProvider.notifier).refreshStatus();
     }
     // A change that waits for the automatic backup goes up now.
     if (state == AppLifecycleState.paused) ref.read(driveProvider.notifier).flush();
   }
 
-  /// Shared or opened JSON goes to the import screen. Links are routes.
+  /// Shared or opened JSON goes to the import screen. Links are routes
+  /// (spec §8.4): `getonit://import`, `getonit://goal/<id>`, and
+  /// `getonit://start/<id>`, which opens today's work (used by nudges).
   void _openIncoming(String text) {
     if (text.startsWith('getonit://')) {
       final uri = Uri.parse(text);
-      if (uri.host == 'import') {
-        navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const ImportScreen()));
+      final id = uri.pathSegments.firstOrNull;
+      final nav = navigatorKey.currentState;
+      switch (uri.host) {
+        case 'import':
+          nav?.push(MaterialPageRoute(builder: (_) => const ImportScreen()));
+        case 'goal' when id != null:
+          nav?.push(MaterialPageRoute(builder: (_) => GoalScreen(goalId: id)));
+        case 'start' when id != null:
+          final view = ref.read(goalViewProvider(id));
+          final ctx = navigatorKey.currentContext;
+          if (view != null && ctx != null) ActionRouter(ctx, ref).call(startWorkAction(view));
       }
       return;
     }
@@ -106,6 +119,8 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final boot = ref.watch(bootstrapProvider);
+    // Keeps the nudge service's copy of today's work current.
+    if (widget.startReminders) ref.listen(nudgesProvider, (_, _) {});
     const seed = Color(0xFF7C5CFA);
     return MaterialApp(
       title: 'Get On It',
