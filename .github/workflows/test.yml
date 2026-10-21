@@ -60,6 +60,14 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Says plainly whether this runner can accelerate the emulator, rather
+      # than leaving a silent boot timeout to explain it.
+      - name: Check emulator acceleration
+        run: |
+          nproc; free -h | head -2
+          ls -l /dev/kvm || true
+          "$ANDROID_HOME/emulator/emulator" -accel-check || true
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -82,6 +90,6 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           working-directory: mobile
           script: flutter test integration_test -d emulator-5554
