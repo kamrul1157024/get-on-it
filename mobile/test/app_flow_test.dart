@@ -192,6 +192,21 @@ void main() {
     await stop(tester);
   });
 
+  testWidgets('a plan shared while the import screen is open lands on Today after import', (tester) async {
+    await start(tester, listenForIntents: true);
+    await tapKey(tester, 'empty-import');
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'app.getonit/intents',
+      const StandardMethodCodec().encodeMethodCall(MethodCall('onText', await sampleText('habit-water.getonit.json'))),
+      (_) {},
+    );
+    await settle(tester);
+    await tapKey(tester, 'import-confirm');
+    expect(find.text('Drink water'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-text')), findsNothing, reason: 'no empty import screen is left behind');
+    await stop(tester);
+  });
+
   testWidgets('a new day resets daily habits and keeps the streak', (tester) async {
     final clock = TestClock(DateTime(2026, 10, 21, 9));
     await start(tester, clock: clock);

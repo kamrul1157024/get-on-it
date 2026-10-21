@@ -62,7 +62,7 @@ class LocalNotificationsGateway implements NotificationGateway {
       debugPrint('Time zone not found, using UTC: $e');
     }
     await _plugin.initialize(
-      settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      settings: const InitializationSettings(android: AndroidInitializationSettings('@drawable/ic_stat_getonit')),
       onDidReceiveNotificationResponse: (r) {
         if (r.payload != null) onTap(r.payload!, r.actionId);
       },

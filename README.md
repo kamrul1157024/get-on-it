@@ -1,3 +1,5 @@
+<p align="center"><img src="mobile/assets/icon/icon.png" width="96" alt="Get On It icon"></p>
+
 # Get On It
 
 *Do the thing.*
@@ -5,9 +7,9 @@
 Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Claude, ChatGPT, or another) makes the plan. The app shows the plan, tracks your progress, and makes sure that you do the work.
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Demo: import a plan, track it, use the widget, and a strict alarm" width="300">
+  <img src="docs/demo.gif" alt="Demo: make a plan with AI, import it, track it, the widget, and a strict alarm" width="300">
   <br>
-  <a href="docs/demo.mp4">Watch the demo video (87 seconds)</a>
+  <a href="docs/demo.mp4">Watch the demo video with narration (71 seconds)</a>
 </p>
 
 ## What it does
@@ -88,7 +90,17 @@ codex exec --sandbox workspace-write '$getonit-planner Make a Get On It plan to 
 
 ## Install the app
 
-Download `getonit.apk` from the [latest release](https://github.com/kamrul1157024/get-on-it/releases/latest), or build it yourself (see below). The repository is private, so you must have access to it.
+Scan the code with your Android phone, or open the link. It downloads `getonit.apk` from the latest release.
+
+<p>
+  <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk"><img src="docs/download-qr.png" width="180" alt="QR code: download getonit.apk"></a>
+</p>
+
+[Download getonit.apk](https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk)
+
+- The repository is private. The link works only for GitHub accounts that have access to it, and you must be signed in to GitHub in the phone's browser.
+- Android asks you to allow installs from your browser the first time.
+- You can also build the APK yourself (see below).
 
 ## Development
 

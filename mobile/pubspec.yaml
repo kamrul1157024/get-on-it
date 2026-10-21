@@ -71,6 +71,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   http: ^1.6.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -117,3 +118,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App icon: `dart run flutter_launcher_icons` writes the Android sizes.
+# Source art: assets/icon/icon.svg.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon/icon.png
+  adaptive_icon_background: assets/icon/background.png
+  adaptive_icon_foreground: assets/icon/foreground.png
+  adaptive_icon_monochrome: assets/icon/monochrome.png
+  adaptive_icon_foreground_inset: 0
+  adaptive_icon_monochrome_inset: 0
+  min_sdk_android: 21

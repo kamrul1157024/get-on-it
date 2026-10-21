@@ -135,7 +135,7 @@ object NudgeEngine {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = Notification.Builder(ctx, CHANNEL)
-            .setSmallIcon(ctx.applicationInfo.icon)
+            .setSmallIcon(app.getonit.R.drawable.ic_stat_getonit)
             .setContentTitle(n.title)
             .setContentText(n.body)
             .setContentIntent(open)
@@ -197,7 +197,7 @@ class NudgeService : Service() {
         super.onCreate()
         NudgeEngine.ensureChannel(this)
         val notification = Notification.Builder(this, SERVICE_CHANNEL)
-            .setSmallIcon(applicationInfo.icon)
+            .setSmallIcon(app.getonit.R.drawable.ic_stat_getonit)
             .setContentTitle("Distraction nudges are on")
             .setContentText("Get On It reminds you of your goal when you unlock the phone.")
             .setOngoing(true)

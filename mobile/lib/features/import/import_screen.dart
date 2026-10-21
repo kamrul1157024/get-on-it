@@ -99,7 +99,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ? 'Imported $n ${n == 1 ? 'goal' : 'goals'}'
         : 'Installed ${parsed.templates.length} ${parsed.templates.length == 1 ? 'template' : 'templates'}';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    Navigator.of(context).pop(true);
+    // Back to Today, also when a shared plan opened a second import screen
+    // on top of one that was already open.
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   @override
