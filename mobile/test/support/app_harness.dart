@@ -15,6 +15,7 @@ import 'package:getonit/features/drive/drive_controller.dart';
 import 'package:getonit/features/drive/remote_store.dart';
 import 'package:getonit/features/nudges/nudges.dart';
 import 'package:getonit/features/player/video_backend.dart';
+import 'package:getonit/features/widgets/home_widgets.dart';
 import 'package:getonit/features/reminders/gateway.dart';
 import 'package:getonit/features/reminders/planner.dart';
 import 'package:getonit/features/reminders/reminders_controller.dart';
@@ -164,6 +165,18 @@ class FakeNudgeBridge implements NudgeBridge {
   ];
 }
 
+/// The native widgets, in memory.
+class FakeWidgetBridge implements WidgetBridge {
+  final data = <String, String>{};
+  var refreshes = 0;
+
+  @override
+  Future<void> save(Map<String, String> d) async => data.addAll(d);
+
+  @override
+  Future<void> refresh() async => refreshes++;
+}
+
 /// Records what the app did outside itself.
 class Fakes {
   final launched = <Uri>[];
@@ -171,6 +184,7 @@ class Fakes {
   final drive = MemoryStore();
   final notifications = FakeGateway();
   final nudges = FakeNudgeBridge();
+  final widgets = FakeWidgetBridge();
   late final driveAccount = FakeDriveAccount(drive);
 
   FakeVideo get video => videos.last;
@@ -195,6 +209,7 @@ Widget buildTestApp({
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       reminderGatewayProvider.overrideWithValue(fakes.notifications),
       if (!realNudges) nudgeBridgeProvider.overrideWithValue(fakes.nudges),
+      widgetBridgeProvider.overrideWithValue(fakes.widgets),
       autoBackupDelayProvider.overrideWithValue(const Duration(seconds: 2)),
       videoBackendProvider.overrideWithValue((id, start) {
         final v = FakeVideo(id, start);

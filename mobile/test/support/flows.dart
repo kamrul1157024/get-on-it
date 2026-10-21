@@ -692,3 +692,20 @@ Future<void> nudgesFlow(WidgetTester tester, Fakes fakes, {required Future<void>
   await waitPush();
   expect((b.last['pending'] as List).map((p) => (p as Map)['goalId']), ['stanford-cs229', 'atomic-habits', 'water']);
 }
+
+/// Home-screen widgets: the app keeps the widget trees current.
+Future<void> widgetsFlow(WidgetTester tester, Fakes fakes, {required Future<void> Function() waitPush}) async {
+  final w = fakes.widgets;
+  await tapKey(tester, 'empty-samples');
+  await waitPush();
+  expect(w.refreshes, greaterThan(0));
+  expect(w.data['today'], contains('0 of 4 done'));
+  expect(w.data['goal:water:medium'], contains('0 / 8 glasses'));
+  final water = find.byKey(const ValueKey('goal-tile:water'));
+  await tester.ensureVisible(water);
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: water, matching: find.byKey(const ValueKey('counter:increment'))));
+  await settle(tester);
+  await waitPush();
+  expect(w.data['goal:water:medium'], contains('1 / 8 glasses'));
+}

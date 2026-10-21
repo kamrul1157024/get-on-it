@@ -118,6 +118,16 @@ class Repository {
           .watch()
           .map((rows) => [for (final r in rows) _stored(r)]);
 
+  /// Active goals now, as a plain query (no stream).
+  Future<List<StoredGoal>> activeGoals() async => [
+    for (final r
+        in await (db.select(db.goals)
+              ..where((g) => g.status.equals('active'))
+              ..orderBy([(g) => OrderingTerm(expression: g.position), (g) => OrderingTerm(expression: g.createdAt)]))
+            .get())
+      _stored(r),
+  ];
+
   StoredGoal _stored(Goal r) => StoredGoal(GoalDoc((jsonDecode(r.json) as Map).cast()), r.createdAt, r.status);
 
   Future<StoredGoal?> goal(String id) async {
@@ -266,6 +276,10 @@ class Repository {
   Stream<Map<String, String>> watchLinkedFiles(String goalId) => (db.select(
     db.linkedFiles,
   )..where((f) => f.goalId.equals(goalId))).watch().map((rows) => {for (final r in rows) r.documentId: r.ref});
+
+  Future<Map<String, String>> linkedFiles(String goalId) async => {
+    for (final r in await (db.select(db.linkedFiles)..where((f) => f.goalId.equals(goalId))).get()) r.documentId: r.ref,
+  };
 
   Future<void> linkFile(String goalId, String documentId, String kind, String ref) => db
       .into(db.linkedFiles)

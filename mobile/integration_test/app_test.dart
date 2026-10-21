@@ -7,6 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:getonit/core/schema/documents.dart';
+import 'package:getonit/data/database.dart';
+import 'package:getonit/data/repository.dart';
+import 'package:getonit/features/widgets/home_widgets.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:getonit/features/reminders/gateway.dart';
 import 'package:getonit/features/reminders/planner.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -190,6 +194,61 @@ void main() {
     await waitUntil(() async => (await status())['running'] == false);
     await goBack(tester);
     await stop(tester);
+  });
+
+  testWidgets('widgets: the app keeps the widget trees current', (tester) async {
+    await run(
+      tester,
+      (f) => widgetsFlow(
+        tester,
+        f,
+        waitPush: () async {
+          for (var i = 0; i < 8; i++) {
+            await tester.pump(const Duration(milliseconds: 200));
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+          }
+          await settle(tester);
+        },
+      ),
+    );
+  });
+
+  testWidgets('a widget "+1" runs in the background against the real database', (tester) async {
+    // Put a goal in the app's real database file.
+    var db = AppDatabase();
+    var repo = Repository(db);
+    await repo.installTemplate(
+      TemplateDoc((jsonDecode(await rootBundle.loadString('assets/templates/habit.json')) as Map).cast()),
+      source: 'builtin',
+    );
+    await repo.deleteGoal('e2e-water');
+    await repo.saveGoal(
+      GoalDoc({
+        'kind': 'goal',
+        'schemaVersion': '1.0',
+        'id': 'e2e-water',
+        'template': 'habit@1',
+        'title': 'E2E water',
+        'data': {'mode': 'count', 'unit': 'glasses', 'target': 8},
+      }),
+    );
+    await db.close();
+
+    // As a tap on the widget's + button does.
+    final action = jsonEncode({
+      'type': 'log_progress',
+      'params': {'goalId': 'e2e-water', 'delta': 1},
+    });
+    await widgetBackgroundCallback(Uri.parse('getonit://widget?json=${Uri.encodeComponent(action)}'));
+
+    db = AppDatabase();
+    repo = Repository(db);
+    final events = (await repo.allEvents()).where((e) => e.goalId == 'e2e-water').toList();
+    expect(events.single.payload, {'delta': 1});
+    final tree = await HomeWidget.getWidgetData<String>('goal:e2e-water:medium');
+    expect(tree, contains('1 / 8 glasses'), reason: 'the widget data was redrawn through home_widget');
+    await repo.deleteGoal('e2e-water');
+    await db.close();
   });
 
   testWidgets('the real YouTube player opens', skip: isCi, (tester) async {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -137,9 +139,31 @@ void main() {
     expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
     await goBack(tester);
 
+    final action = jsonEncode({
+      'type': 'open_goal',
+      'params': {'goalId': 'meditate'},
+    });
+    await send('getonit://action?json=${Uri.encodeComponent(action)}');
+    expect(find.widgetWithText(AppBar, 'Meditate 10 min'), findsOneWidget, reason: 'a widget "open" button');
+    await goBack(tester);
+
     await send('getonit://start/stanford-cs229');
     expect(fakes.launched.single.toString(), 'https://www.youtube.com/watch?v=jGwO_UgTS7I&t=0s');
     await stop(tester);
+  });
+
+  testWidgets('widgets: the app keeps the widget trees current', (tester) async {
+    await run(
+      tester,
+      (f) => widgetsFlow(
+        tester,
+        f,
+        waitPush: () async {
+          await tester.pump(const Duration(seconds: 1));
+          await settle(tester);
+        },
+      ),
+    );
   });
 
   testWidgets('a shared plan opens the import preview', (tester) async {

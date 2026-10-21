@@ -50,10 +50,14 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # JVM tests for the native nudge rules (NudgeRulesTest.kt).
+      # JVM tests for the native nudge rules and the widget renderer. The
+      # Gradle wrapper is not committed (Flutter's .gitignore); --config-only
+      # writes it.
       - name: Kotlin unit tests
-        working-directory: mobile/android
-        run: ./gradlew :app:testDebugUnitTest --console=plain
+        working-directory: mobile
+        run: |
+          flutter build apk --config-only
+          cd android && ./gradlew :app:testDebugUnitTest --console=plain
 
   skill:
     name: Claude skill

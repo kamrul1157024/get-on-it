@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import '../features/drive/drive_controller.dart';
 import '../features/goal/goal_screen.dart';
 import '../features/nudges/nudges.dart';
 import '../features/reminders/alarm_screen.dart';
+import '../features/widgets/home_widgets.dart';
 import '../features/reminders/reminders_controller.dart';
 import '../features/import/import_screen.dart';
 import '../features/intents/incoming.dart';
@@ -106,6 +108,14 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
           nav?.push(MaterialPageRoute(builder: (_) => const ImportScreen()));
         case 'goal' when id != null:
           nav?.push(MaterialPageRoute(builder: (_) => GoalScreen(goalId: id)));
+        // A widget button that opens something: the action runs as if tapped
+        // in the app. Only known action types do anything.
+        case 'action':
+          final json = uri.queryParameters['json'];
+          final ctx = navigatorKey.currentContext;
+          if (json != null && ctx != null) {
+            ActionRouter(ctx, ref).call((jsonDecode(json) as Map).cast<String, Object?>());
+          }
         case 'start' when id != null:
           final view = ref.read(goalViewProvider(id));
           final ctx = navigatorKey.currentContext;
@@ -120,7 +130,11 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
   Widget build(BuildContext context) {
     final boot = ref.watch(bootstrapProvider);
     // Keeps the nudge service's copy of today's work current.
-    if (widget.startReminders) ref.listen(nudgesProvider, (_, _) {});
+    if (widget.startReminders) {
+      ref.listen(nudgesProvider, (_, _) {});
+      // Keeps the home-screen widgets current.
+      ref.listen(widgetSyncProvider, (_, _) {});
+    }
     const seed = Color(0xFF7C5CFA);
     return MaterialApp(
       title: 'Get On It',

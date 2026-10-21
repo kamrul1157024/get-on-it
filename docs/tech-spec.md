@@ -729,6 +729,14 @@ Rules:
 - When the widget gets smaller, the app removes the last tiles first.
 - v1 provides an in-app editor for `manual` dashboards with preset layouts: 2×2, 1 wide + 2 square, and 4 wide rows.
 
+### 10.5a As built
+
+- **Today** widget (`TodayWidgetReceiver`): a header, then each goal's `tile_wide` surface. Open goals come first.
+- **Goal** widget (`GoalWidgetReceiver`): one goal, selected in a picker when the user adds the widget. It uses `widget.small` or `tile` when narrow, and `widget.medium` or `tile_wide` when wide.
+- Flutter writes the resolved trees with `home_widget`: `today`, `goal:<id>:small`, `goal:<id>:medium`, and `goals`.
+- Buttons with `mark_done`, `toggle_done`, or `log_progress` run a Dart callback in the background (`widgetBackgroundCallback`). The callback writes the event and redraws the widgets. Other actions open the app with `getonit://action?json=<action>`.
+- The database is shared across isolates, so the app's screens see widget taps at once.
+
 ### 10.6 Update policy
 
 - The app updates the widgets after each event.
@@ -988,6 +996,22 @@ getonit-planner/
 | **Phase 2** | Multi-device sync, progress export and re-plan, encryption, dashboards from Claude, interrupt screen |
 
 M8 can run in parallel with M2–M7, because it depends only on the schemas from M1.
+
+### 19.1 Status (2026-10-21)
+
+All milestones M1–M8 are built in PR #1. These parts differ from the plan or are not built:
+
+| Item | Status |
+|---|---|
+| Widgets: `progress_ring` | Glance has no determinate ring. The widget shows the label over a short bar. Flutter does not render images for widgets. |
+| Widgets: dashboard editor (§10.5 `manual` mode) | Not built. The **Today** widget uses `auto_today`. The **Goal** widget shows one goal that the user selects. |
+| Widgets: `heatmap`, `image` | Not drawn in widgets. |
+| Drive: real Google sign-in | Built, but not tested. It needs the OAuth clients in docs/drive.md. Tests use a fake Drive API. |
+| Drive: PDF from Drive (§13.5) | Not built. Local PDFs are copied into app storage. |
+| Reminders: Do Not Disturb exception (§11.5) | Not built. Android applies DND to the reminder channels. |
+| Components `tabs`, `timer`, `video_player`, `pdf_viewer` (§6.5) | Not built. The player and the reader are screens, opened by actions. |
+| Actions `start_timer`, `snooze_reminder` (§8.2) | Not built. Snooze is a notification button. |
+| Course videos with embedding off | Built (`embeddable: false`). Such videos open on YouTube. All CS229 videos have embedding off. |
 
 ## 20. Risks
 

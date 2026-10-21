@@ -1,0 +1,12 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/goal_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="120dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:configure="app.getonit.widget.GoalWidgetConfigActivity"
+    android:widgetFeatures="reconfigurable"
+    android:updatePeriodMillis="0" />

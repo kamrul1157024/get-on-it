@@ -123,30 +123,7 @@ class ActionRouter {
 
   Future<void> _toggle(String goalId, Map<String, Object?> params) async {
     final view = ref.read(goalViewProvider(goalId));
-    if (view == null) return;
-    final repo = ref.read(repositoryProvider);
-    final s = view.state;
-    final step = params['stepId'] as String?;
-    final item = params['itemId'] as String?;
-    if (step != null) {
-      final current =
-          (s['steps'] as List? ?? const []).whereType<Map>().firstWhere(
-            (x) => x['id'] == step,
-            orElse: () => const {},
-          )['done'] ==
-          true;
-      await repo.addEvent(goalId, EventType.stepDone, {'step': step, 'done': !current});
-    } else if (item != null) {
-      final current =
-          (s['items'] as List? ?? const []).whereType<Map>().firstWhere(
-            (x) => x['id'] == item,
-            orElse: () => const {},
-          )['done'] ==
-          true;
-      await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': !current});
-    } else {
-      await repo.addEvent(goalId, EventType.check, {'checked': s['checked'] != true});
-    }
+    if (view != null) await toggleDone(ref.read(repositoryProvider), view, params);
   }
 }
 
@@ -205,4 +182,51 @@ Map<String, Object?> startWorkAction(GoalView view) {
     'type': 'open_goal',
     'params': {'goalId': id},
   };
+}
+
+/// Toggles a checklist step, a course item, or a check habit.
+Future<void> toggleDone(Repository repo, GoalView view, Map<String, Object?> params) async {
+  final goalId = view.goal.id;
+  final s = view.state;
+  final step = params['stepId'] as String?;
+  final item = params['itemId'] as String?;
+  bool doneIn(String key, String id) =>
+      (s[key] as List? ?? const []).whereType<Map>().firstWhere((x) => x['id'] == id, orElse: () => const {})['done'] ==
+      true;
+  if (step != null) {
+    await repo.addEvent(goalId, EventType.stepDone, {'step': step, 'done': !doneIn('steps', step)});
+  } else if (item != null) {
+    await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': !doneIn('items', item)});
+  } else {
+    await repo.addEvent(goalId, EventType.check, {'checked': s['checked'] != true});
+  }
+}
+
+/// Actions that only write events; widgets run these without opening the app.
+const dataActions = {'mark_done', 'toggle_done', 'log_progress'};
+
+/// Runs a data action against the database directly. Used by the widget
+/// background callback, which has no screen.
+Future<void> runDataAction(Repository repo, GoalView view, Map<String, Object?> action) async {
+  final params = (action['params'] as Map?)?.cast<String, Object?>() ?? const {};
+  final goalId = view.goal.id;
+  switch (action['type']) {
+    case 'mark_done':
+      final item = params['itemId'] as String?;
+      if (item != null) {
+        await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': true});
+      } else {
+        await completeToday(repo, view);
+      }
+    case 'toggle_done':
+      await toggleDone(repo, view, params);
+    case 'log_progress':
+      final delta = asNum(params['delta']);
+      final value = asNum(params['value']);
+      if (delta != null) {
+        await repo.addEvent(goalId, EventType.countDelta, {'delta': delta});
+      } else if (value != null) {
+        await repo.addEvent(goalId, EventType.pageReached, {'page': value.toInt()});
+      }
+  }
 }

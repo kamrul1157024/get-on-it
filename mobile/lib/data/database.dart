@@ -66,7 +66,10 @@ class Settings extends Table {
 
 @DriftDatabase(tables: [Templates, Goals, Events, LinkedFiles, Settings])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'getonit'));
+  // Shared across isolates, so a widget button handled in the background
+  // isolate updates the app's screens too.
+  AppDatabase([QueryExecutor? executor])
+    : super(executor ?? driftDatabase(name: 'getonit', native: const DriftNativeOptions(shareAcrossIsolates: true)));
 
   @override
   int get schemaVersion => 1;
