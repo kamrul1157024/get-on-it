@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../core/schema/validator.dart';
 import '../../render/goal_surface.dart';
 import '../goal/goal_screen.dart';
+import '../import/ask_ai_screen.dart';
 import '../import/import_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -113,7 +114,7 @@ class _Empty extends StatelessWidget {
             Text('No goals yet', style: t.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Ask Claude for a plan, then paste or share the JSON here.',
+              'Ask Claude or ChatGPT for a plan, then paste or share it here.',
               textAlign: TextAlign.center,
               style: t.bodyMedium,
             ),
@@ -123,6 +124,13 @@ class _Empty extends StatelessWidget {
               onPressed: onImport,
               icon: const Icon(Icons.content_paste),
               label: const Text('Import a plan'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('empty-ask'),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AskAiScreen())),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Make a plan with AI'),
             ),
             const SizedBox(height: 8),
             TextButton(

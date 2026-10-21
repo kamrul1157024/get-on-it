@@ -9,6 +9,20 @@ The skill is in this repository:
 - `skill/skills/getonit-planner/` is the skill folder. It has `SKILL.md` in it.
 - `.claude-plugin/marketplace.json` makes this repository a plugin marketplace named `get-on-it`.
 
+
+## No install: copy a prompt
+
+You do not need to install anything to make a plan:
+
+1. In the app, tap **Make a plan with AI**.
+2. Say what you want.
+3. Tap **Copy prompt**. Paste it into Claude, ChatGPT, or another chat.
+4. Copy the whole answer. In the app, tap **Import a plan**, then **Paste**.
+
+To change a plan, open the goal and tap **⋮ → Change plan with AI**. The prompt contains the plan and your progress, and it tells the AI to keep the IDs, so your progress stays.
+
+The skill below does more. It looks up real YouTube video IDs and durations, and it checks the plan before it gives it to you.
+
 ## Claude Code: install the plugin
 
 Run these commands in Claude Code:
@@ -147,7 +161,7 @@ Use one of these ways:
 
 - **Share.** Send the file or the JSON text to your phone. Tap Share and select Get On It.
 - **Open with.** Open the `.getonit.json` file on your phone, for example from Downloads, Google Drive, or a chat app. Select "Open with" > Get On It.
-- **Paste.** Copy the JSON text. Open Get On It. Tap "Paste plan" on the Today screen.
+- **Paste.** Copy the JSON text. Open Get On It. Tap "Import a plan" (or the "Import plan" button), then "Paste".
 
 The app shows a preview before it saves the plan.
 Check the plan there. Turn on the reminders that you want.

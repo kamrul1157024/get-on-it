@@ -886,7 +886,7 @@ The user can select a PDF from Drive with the Google Picker. The app stores the 
 |---|---|
 | Share sheet | Intent filters for `text/plain` and `application/json` |
 | Open file | Intent filter for `application/json` and the `.getonit.json` extension |
-| Paste | "Paste plan" button on the Today screen |
+| Paste | "Import a plan" button on the Today screen, then "Paste" |
 | Drive | Open a file from the Drive app with "Open with → Get On It" |
 
 ### 14.2 Validation

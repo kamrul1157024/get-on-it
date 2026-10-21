@@ -251,6 +251,14 @@ void main() {
     await db.close();
   });
 
+  testWidgets('make a plan with any AI: copy the prompt, paste the answer', (tester) async {
+    await run(tester, (f) => askAiFlow(tester, f));
+  });
+
+  testWidgets('change a plan with AI: the update keeps progress', (tester) async {
+    await run(tester, (f) => editAiFlow(tester, f));
+  });
+
   testWidgets('the real YouTube player opens', skip: isCi, (tester) async {
     await start(tester, realPlayer: true);
     await importPlan(tester, await embeddableCourse());

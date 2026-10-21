@@ -7,6 +7,7 @@ import '../../core/schema/documents.dart';
 import '../../core/schema/validator.dart';
 import '../../data/repository.dart';
 import '../reminders/planner.dart';
+import 'ask_ai_screen.dart';
 import '../reminders/reminders_controller.dart';
 
 /// Paste or receive a plan, check it, preview it, and save it. Spec §14.
@@ -62,7 +63,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final installed = await repo.templates();
     final parsed = parseImport(_text.text, (ref) => installed[ref]);
     final previews = <_GoalPreview>[];
+    final settings = await repo.settings();
     for (final g in parsed.goals) {
+      // An update shows the reminders as they are now.
+      _remindersOn.putIfAbsent(g.id, () => settings[reminderSettingKey(g.id)] == 'true');
       final template = parsed.templates.where((t) => t.ref == g.templateRef).firstOrNull ?? installed[g.templateRef];
       final engine = template == null ? null : engineRegistry.forGoal(template, g);
       final existing = await repo.goal(g.id);
@@ -84,8 +88,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
     for (final g in parsed.goals) {
       await repo.saveGoal(g);
-      if (g.reminders != null && _remindersOn[g.id] == true) {
-        await repo.setSetting(reminderSettingKey(g.id), 'true');
+      if (g.reminders != null) {
+        await repo.setSetting(reminderSettingKey(g.id), _remindersOn[g.id] == true ? 'true' : 'false');
       }
     }
     ref.read(remindersProvider.notifier).scheduleSync();
@@ -111,7 +115,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Paste the JSON that Claude made for you.', style: t.bodyMedium),
+            Text('Paste the plan that Claude or ChatGPT made for you.', style: t.bodyMedium),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('import-ask'),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AskAiScreen())),
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('No plan yet? Make one with AI'),
+              ),
+            ),
             const SizedBox(height: 12),
             TextField(
               key: const ValueKey('import-text'),

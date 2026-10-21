@@ -45,10 +45,10 @@ void main() {
     final t = TemplateDoc(readJson('assets/templates/habit.json'));
     expect(await repo.installTemplate(t, source: 'builtin'), true);
     expect(await repo.installTemplate(t), false);
-    final newer = TemplateDoc({...t.json, 'version': '1.1.0'});
+    final newer = TemplateDoc({...t.json, 'version': '1.99.0'});
     expect(await repo.installTemplate(newer), true);
-    expect(await repo.installTemplate(t), false, reason: '1.0.0 is older than the installed 1.1.0');
-    expect((await repo.templates())['habit@1']!.version, '1.1.0');
+    expect(await repo.installTemplate(t), false, reason: '${t.version} is older than the installed 1.99.0');
+    expect((await repo.templates())['habit@1']!.version, '1.99.0');
     // A different major version is a different template.
     final v0 = TemplateDoc({...t.json, 'version': '0.9.0'});
     expect(await repo.installTemplate(v0), true);

@@ -25,6 +25,11 @@ final _idPattern = RegExp(r'^[a-z0-9][a-z0-9-]{0,63}$');
 final _templateRef = RegExp(r'^[a-z0-9][a-z0-9-]{0,63}@\d+$');
 final _semver = RegExp(r'^\d+\.\d+\.\d+$');
 final _hex = RegExp(r'^#[0-9a-fA-F]{6}$');
+const _goalFields = {
+  'kind', 'schemaVersion', 'id', 'template', 'title', 'icon', 'accent', //
+  'startDate', 'deadline', 'schedule', 'reminders', 'nudges', 'data',
+};
+
 final _fence = RegExp(r'```(?:json)?\s*\n([\s\S]*?)\n?```');
 
 /// Pulls JSON out of text that Claude may have wrapped in a code fence.
@@ -221,6 +226,14 @@ void checkTree(Map tree, String path, List<ValidationIssue> issues) {
 }
 
 void _checkGoal(Map<String, Object?> doc, String p, TemplateDoc? Function(String) find, List<ValidationIssue> issues) {
+  // Typos such as "deadlnie" would be ignored without a word.
+  for (final key in doc.keys) {
+    if (!_goalFields.contains(key)) {
+      issues.add(
+        ValidationIssue('$p$key', 'Unknown field. Check the spelling, or move it into "data".', warning: true),
+      );
+    }
+  }
   final title = doc['title'];
   if (title is! String || title.trim().isEmpty) {
     issues.add(ValidationIssue('${p}title', 'required'));

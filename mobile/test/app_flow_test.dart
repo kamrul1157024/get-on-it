@@ -166,6 +166,14 @@ void main() {
     );
   });
 
+  testWidgets('make a plan with any AI: copy the prompt, paste the answer', (tester) async {
+    await run(tester, (f) => askAiFlow(tester, f));
+  });
+
+  testWidgets('change a plan with AI: the update keeps progress', (tester) async {
+    await run(tester, (f) => editAiFlow(tester, f));
+  });
+
   testWidgets('a shared plan opens the import preview', (tester) async {
     const channel = MethodChannel('app.getonit/intents');
     // Read before start(), so the asset cache from the last test must go first.

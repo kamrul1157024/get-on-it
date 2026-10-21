@@ -112,4 +112,20 @@ void main() {
     expect(parsed.templates.single.ref, 'pushups@1');
     expect(parsed.goals.single.templateRef, 'pushups@1');
   });
+
+  test('an AI answer with fields in the wrong place is refused, with the path', () {
+    // A real Claude answer: "schedule" inside "data" and an invented "endDate".
+    final parsed = parseImport(File('test/fixtures/ai-edit-misplaced-fields.json').readAsStringSync(), lookup);
+    expect(parsed.ok, false);
+    expect(parsed.errors.map((e) => e.path), contains('data'));
+    expect(parsed.errors.map((e) => e.message).join(), contains('schedule'));
+  });
+
+  test('unknown top-level goal fields are a warning', () {
+    final doc = readJson('assets/samples/habit-water.getonit.json')..['deadlnie'] = '2026-12-31';
+    final parsed = parseImport(jsonEncode(doc), lookup);
+    expect(parsed.ok, true);
+    expect(parsed.issues.single.path, 'deadlnie');
+    expect(parsed.issues.single.warning, true);
+  });
 }

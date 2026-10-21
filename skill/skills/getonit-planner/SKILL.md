@@ -110,6 +110,6 @@ Give the user:
 4. How to get it onto the phone:
    - **Share:** send the file (or the copied text) to the phone, then use the Share button and pick Get On It.
    - **Open with:** open the `.getonit.json` file on the phone (from Downloads, Drive, or a chat app) and pick "Open with → Get On It".
-   - **Paste:** copy the JSON code block, open Get On It, and tap "Paste plan" on the Today screen.
+   - **Paste:** copy the JSON code block, open Get On It, and tap "Import a plan", then "Paste".
 
 The app shows a preview before it saves anything. The user can check the plan and turn on the reminders there.

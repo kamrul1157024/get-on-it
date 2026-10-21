@@ -489,6 +489,15 @@ Future<void> remindersFlow(WidgetTester tester, Fakes fakes) async {
   await settle(tester);
   expect(n.scheduled, hasLength(28), reason: '4 steps on each of 7 days');
 
+  // Importing the plan again shows the reminders as on, and keeps them on.
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  final sw = tester.widget<SwitchListTile>(find.byKey(const ValueKey('import-reminders:stretch')));
+  expect(sw.value, true);
+  await tapKey(tester, 'import-confirm');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  expect(n.scheduled, hasLength(28));
+
   Future<void> openSettings() async {
     await tester.tap(find.byTooltip('Settings'));
     await settle(tester);
@@ -708,4 +717,72 @@ Future<void> widgetsFlow(WidgetTester tester, Fakes fakes, {required Future<void
   await settle(tester);
   await waitPush();
   expect(w.data['goal:water:medium'], contains('1 / 8 glasses'));
+}
+
+/// No skill installed: make a prompt, "ask" an AI, paste its whole answer.
+Future<void> askAiFlow(WidgetTester tester, Fakes fakes) async {
+  await tapKey(tester, 'empty-ask');
+  await tapText(tester, 'Drink 8 glasses of water a day');
+  await tapKey(tester, 'ask-copy');
+  final prompt = (await Clipboard.getData(Clipboard.kTextPlain))!.text!;
+  expect(prompt, contains('Drink 8 glasses of water a day'));
+  expect(prompt, contains('habit@1'));
+  await tapKey(tester, 'ask-claude');
+  expect(fakes.launched.last.toString(), 'https://claude.ai/new');
+  await tapKey(tester, 'ask-chatgpt');
+  expect(fakes.launched.last.toString(), 'https://chatgpt.com/');
+
+  // A typical answer: a sentence, the code block, a sentence.
+  final answer =
+      'Here is your plan.\n\n```json\n${await sampleText('habit-water.getonit.json')}\n```\n\nImport it in Get On It.';
+  await _snackGone(tester);
+  await tapKey(tester, 'ask-import');
+  await tester.enterText(find.byKey(const ValueKey('import-text')), answer);
+  await tapKey(tester, 'import-check');
+  expect(find.text('8 glasses per day'), findsOneWidget);
+  await tapKey(tester, 'import-confirm');
+  expect(find.text('Drink water'), findsOneWidget);
+}
+
+/// Change a plan with AI: the prompt carries the plan and progress; the
+/// answer comes back as an update that keeps progress.
+Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
+  await importPlan(tester, await sampleText('course-cs229.getonit.json'));
+  await tapText(tester, 'Stanford CS229: Machine Learning');
+  await tapText(tester, 'Mark done');
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Change plan with AI');
+  expect(find.text('Change this plan with AI'), findsOneWidget);
+  await tapText(tester, 'Move the deadline two weeks later');
+  await tapKey(tester, 'ask-copy');
+  final prompt = (await Clipboard.getData(Clipboard.kTextPlain))!.text!;
+  expect(prompt, contains('Move the deadline two weeks later'));
+  expect(prompt, contains('"id": "stanford-cs229"'));
+  expect(prompt, contains('Done item ids: lec-01'));
+
+  // The AI's answer: the same plan with a later deadline.
+  final doc = (jsonDecode(await sampleText('course-cs229.getonit.json')) as Map).cast<String, Object?>();
+  doc['deadline'] = '2027-01-14';
+  await _snackGone(tester);
+  await tapKey(tester, 'ask-import');
+  await tester.enterText(find.byKey(const ValueKey('import-text')), '```json\n${jsonEncode(doc)}\n```');
+  await tapKey(tester, 'import-check');
+  expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
+  expect(find.textContaining('deadline 14 Jan'), findsOneWidget);
+  await tapKey(tester, 'import-confirm');
+  await tapText(tester, 'Stanford CS229: Machine Learning');
+  expect(find.text('1 of 21 videos'), findsWidgets);
+  await goBack(tester);
+}
+
+/// The "Prompt copied" message covers the bottom of the screen for a few
+/// seconds, as for a real user.
+Future<void> _snackGone(WidgetTester tester) async {
+  // Host tests run on fake time; on a device the timer runs on real time.
+  final live = tester.binding is LiveTestWidgetsFlutterBinding;
+  for (var i = 0; i < 12 && find.byType(SnackBar).evaluate().isNotEmpty; i++) {
+    await tester.pump(const Duration(seconds: 1));
+    if (live) await Future<void>.delayed(const Duration(seconds: 1));
+  }
+  await tester.pumpAndSettle();
 }

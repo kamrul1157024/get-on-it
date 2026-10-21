@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../render/goal_surface.dart';
+import '../import/ask_ai_screen.dart';
 import '../reminders/planner.dart';
 import '../reminders/reminders_controller.dart';
 
@@ -30,6 +31,10 @@ class GoalScreen extends ConsumerWidget {
                 }
                 return;
               }
+              if (v == 'edit-ai') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => AskAiScreen(goalId: goalId)));
+                return;
+              }
               if (v != 'delete') return;
               final ok = await showDialog<bool>(
                 context: context,
@@ -52,6 +57,7 @@ class GoalScreen extends ConsumerWidget {
                 remindersOn
                     ? const PopupMenuItem(value: 'reminders-off', child: Text('Turn reminders off'))
                     : PopupMenuItem(value: 'reminders-on', child: Text('Turn reminders on (${presetOf(view!.goal)})')),
+              const PopupMenuItem(value: 'edit-ai', child: Text('Change plan with AI')),
               const PopupMenuItem(value: 'delete', child: Text('Delete goal')),
             ],
           ),

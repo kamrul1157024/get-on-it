@@ -259,6 +259,7 @@
     },
     "data-book-1": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "book",
         "pages"
@@ -336,6 +337,7 @@
     },
     "data-course-1": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "items"
       ],
@@ -357,6 +359,27 @@
         "dailyTargetMinutes": {
           "type": "number",
           "minimum": 1
+        },
+        "milestones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "afterItem": {
+                "type": "string"
+              }
+            }
+          }
         },
         "items": {
           "type": "array",
@@ -425,6 +448,7 @@
     },
     "data-habit-1": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "mode"
       ],
