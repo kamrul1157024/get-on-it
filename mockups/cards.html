@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Get On It – Sample JSON UI Cards</title>
+<style>
+  :root {
+    --bg: #0f1115; --surface: #1a1d24; --surface2: #232731; --outline: #343a46;
+    --text: #e8eaf0; --muted: #9aa3b2; --success: #4caf7d; --warning: #f0a33a; --danger: #e5534b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+  header { padding: 28px 40px 8px; }
+  header h1 { margin: 0 0 6px; font-size: 24px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  .sample { display: grid; grid-template-columns: 400px 1fr; gap: 28px; padding: 24px 40px; border-bottom: 1px solid var(--outline); }
+  .sample h2 { grid-column: 1 / -1; margin: 0; font-size: 17px; }
+  .sample h2 small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .stage { background: #0a0c10; border-radius: 20px; padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
+  .stage.wallpaper { background: linear-gradient(160deg, #24324a, #3b2a4a 60%, #1d2a3a); }
+  pre { margin: 0; background: #0a0c10; border-radius: 12px; padding: 16px; font-size: 12px; line-height: 1.45;
+        color: #c9d1d9; overflow: auto; max-height: 520px; }
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2d3340; color: var(--text);
+           padding: 12px 18px; border-radius: 10px; font: 13px monospace; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 80vw; }
+  #toast.show { opacity: 1; }
+
+  /* ---- component styles (what the Flutter renderer will mirror) ---- */
+  .c-card { background: var(--surface); border-radius: 20px; padding: 16px; width: 360px; cursor: default; }
+  .c-card.tonal { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  .c-card.outlined { background: transparent; border: 1px solid var(--outline); }
+  .c-card.widget-small { width: 170px; height: 170px; border-radius: 24px; padding: 14px; }
+  .c-card.widget-medium { width: 360px; height: 170px; border-radius: 24px; padding: 14px; }
+  .c-card.widget-large { width: 360px; border-radius: 24px; padding: 14px; }
+  .c-card.tile { width: auto; border-radius: 16px; padding: 10px; background: var(--surface2); }
+  .c-card.tile .c-counter button { width: 30px; height: 30px; font-size: 16px; }
+  .c-card.tile .c-check { padding: 0; }
+  .c-grid { display: grid; }
+  .c-card.notification { width: 360px; border-radius: 18px; background: #262a33; padding: 14px 16px; }
+  .c-card[data-action] { cursor: pointer; }
+  .c-column { display: flex; flex-direction: column; }
+  .c-row { display: flex; flex-direction: row; align-items: center; }
+  .c-row.between { justify-content: space-between; }
+  .c-row.top { align-items: flex-start; }
+  .c-expand { flex: 1; min-width: 0; }
+  .c-text { margin: 0; overflow: hidden; text-overflow: ellipsis; }
+  .t-display { font-size: 34px; font-weight: 700; line-height: 1.1; }
+  .t-title { font-size: 18px; font-weight: 600; }
+  .t-subtitle { font-size: 15px; font-weight: 500; }
+  .t-body { font-size: 14px; }
+  .t-caption { font-size: 12px; color: var(--muted); }
+  .t-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .clamp1 { white-space: nowrap; }
+  .c-icon { font-size: 20px; line-height: 1; }
+  .c-icon.box { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+                background: color-mix(in srgb, var(--accent) 22%, transparent); font-size: 18px; }
+  .c-bar { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
+  .c-bar > div { height: 100%; border-radius: 99px; background: var(--accent); }
+  .c-ring { position: relative; display: grid; place-items: center; }
+  .c-ring svg { transform: rotate(-90deg); }
+  .c-ring .inner { position: absolute; text-align: center; }
+  .c-ring .inner b { display: block; font-size: 20px; }
+  .c-ring .inner span { font-size: 11px; color: var(--muted); }
+  .c-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+  .tone-success { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
+  .tone-warning { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
+  .tone-danger  { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+  .tone-neutral { background: var(--surface2); color: var(--muted); }
+  .c-button { border: 0; border-radius: 99px; padding: 10px 18px; font: 600 14px inherit; font-family: inherit; cursor: pointer;
+              display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+  .c-button.filled { background: var(--accent); color: #0b0d12; }
+  .c-button.tonal { background: color-mix(in srgb, var(--accent) 22%, var(--surface2)); color: var(--text); }
+  .c-button.text { background: transparent; color: var(--accent); padding: 10px 8px; }
+  .c-button.full { width: 100%; }
+  .c-stat b { display: block; font-size: 18px; }
+  .c-stat span { font-size: 12px; color: var(--muted); }
+  .c-divider { height: 1px; background: var(--outline); }
+  .c-check { display: flex; align-items: center; gap: 12px; padding: 8px 0; cursor: pointer; }
+  .c-check .box { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--outline); display: grid; place-items: center; flex: none; }
+  .c-check.checked .box { background: var(--accent); border-color: var(--accent); color: #0b0d12; font-weight: 900; }
+  .c-check.checked .lbl { text-decoration: line-through; color: var(--muted); }
+  .c-media { position: relative; border-radius: 12px; overflow: hidden; background: #000; flex: none; }
+  .c-media.video { background: linear-gradient(135deg, #8c1515, #3d0a0a); }
+  .c-media.video .play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; }
+  .c-media.video .ts { position: absolute; right: 6px; bottom: 8px; background: rgba(0,0,0,.75); font-size: 11px; padding: 1px 5px; border-radius: 4px; }
+  .c-media.video .seek { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.25); }
+  .c-media.video .seek > div { height: 100%; background: #f00; }
+  .c-media.pdf { background: #f5f1e8; padding: 10px 9px; }
+  .c-media.pdf .ln { height: 4px; background: #c9c2b2; border-radius: 2px; margin-bottom: 5px; }
+  .c-media.pdf .ln.h { background: #6b6455; width: 60%; height: 6px; margin-bottom: 9px; }
+  .c-media.pdf .pg { position: absolute; bottom: 4px; right: 6px; font-size: 9px; color: #6b6455; }
+  .c-dots { display: flex; gap: 6px; }
+  .c-dots .d { width: 30px; text-align: center; font-size: 10px; color: var(--muted); }
+  .c-dots .d i { display: block; width: 22px; height: 22px; margin: 4px auto 0; border-radius: 50%; background: var(--surface2); }
+  .c-dots .d.done i { background: var(--accent); }
+  .c-dots .d.today i { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .c-dots .d.rest i { background: transparent; border: 1px dashed var(--outline); }
+  .c-counter { display: flex; align-items: center; gap: 10px; }
+  .c-counter button { width: 40px; height: 40px; border-radius: 50%; border: 0; font-size: 20px; cursor: pointer;
+                      background: color-mix(in srgb, var(--accent) 22%, var(--surface2)); color: var(--text); }
+  .c-unknown { border: 1px dashed var(--danger); color: var(--danger); font-size: 12px; padding: 8px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sample JSON UI cards</h1>
+  <p>Each preview on the left is drawn from the JSON on the right by a tiny renderer (bottom of this file).
+     Click buttons and cards to see the action that the app would dispatch.</p>
+</header>
+<main id="samples"></main>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+ * SAMPLES
+ * Each sample = { template (UI tree with {{bindings}}), data (from Claude), state (from the app) }.
+ * Bindings are path-only. Computed values (progress, pace, today's pages)
+ * come from the app's progress engine and live in `state`.
+ * ===================================================================== */
+const SAMPLES = [
+{
+  title: "Course · Up Next", note: "template: course@1 · surface: screen",
+  data: { id: "cs229", title: "Stanford CS229: Machine Learning", accent: "#e0573f" },
+  state: {
+    next: { id: "lec-08", title: "Lecture 8: Kernels", positionLabel: "34:12", remainingLabel: "46 min left", watched: 0.43, videoId: "VIDEO_ID_08", positionSec: 2052 },
+    progress: 0.42, progressLabel: "7 of 20 lectures", pace: { label: "On track", tone: "success" }
+  },
+  template: {
+    type: "card", accent: "{{data.accent}}",
+    child: { type: "column", gap: 14, children: [
+      { type: "row", gap: 10, children: [
+        { type: "icon", name: "🎓", box: true },
+        { type: "column", expand: true, children: [
+          { type: "text", style: "label", value: "Up next" },
+          { type: "text", style: "subtitle", value: "{{data.title}}", maxLines: 1 } ] },
+        { type: "badge", label: "{{state.pace.label}}", tone: "{{state.pace.tone}}" } ] },
+      { type: "row", gap: 12, align: "top", children: [
+        { type: "media", kind: "video", width: 128, height: 72, progress: "{{state.next.watched}}", timestamp: "{{state.next.positionLabel}}" },
+        { type: "column", gap: 4, expand: true, children: [
+          { type: "text", style: "body", value: "{{state.next.title}}" },
+          { type: "text", style: "caption", value: "Resume at {{state.next.positionLabel}} · {{state.next.remainingLabel}}" } ] } ] },
+      { type: "column", gap: 6, children: [
+        { type: "progress_bar", value: "{{state.progress}}" },
+        { type: "text", style: "caption", value: "{{state.progressLabel}}" } ] },
+      { type: "row", gap: 8, children: [
+        { type: "button", variant: "filled", icon: "▶", label: "Resume", expand: true,
+          action: { type: "open_video", params: { provider: "youtube", videoId: "{{state.next.videoId}}", startSec: "{{state.next.positionSec}}" } } },
+        { type: "button", variant: "tonal", label: "Mark done",
+          action: { type: "mark_done", params: { goalId: "{{data.id}}", itemId: "{{state.next.id}}" } } } ] } ] }
+  }
+},
+{
+  title: "Book · Today's Pages", note: "template: book@1 · surface: screen",
+  data: { id: "atomic-habits", title: "Atomic Habits", author: "James Clear", accent: "#5aa9e6" },
+  state: {
+    today: { startPage: 45, endPage: 46, label: "p. 45–46", minutesLabel: "≈ 4 min" },
+    progress: 0.14, progressLabel: "Page 44 of 320", streakLabel: "9 days", finishLabel: "Finish ≈ 12 Mar"
+  },
+  template: {
+    type: "card", accent: "{{data.accent}}",
+    child: { type: "row", gap: 14, align: "top", children: [
+      { type: "media", kind: "pdf_page", width: 92, height: 124, page: "{{state.today.startPage}}" },
+      { type: "column", gap: 8, expand: true, children: [
+        { type: "text", style: "label", value: "Today's reading" },
+        { type: "column", children: [
+          { type: "text", style: "title", value: "{{data.title}}" },
+          { type: "text", style: "caption", value: "{{data.author}}" } ] },
+        { type: "row", gap: 6, children: [
+          { type: "badge", label: "{{state.today.label}}", tone: "neutral" },
+          { type: "badge", label: "🔥 {{state.streakLabel}}", tone: "warning" } ] },
+        { type: "progress_bar", value: "{{state.progress}}" },
+        { type: "text", style: "caption", value: "{{state.progressLabel}} · {{state.finishLabel}}" },
+        { type: "button", variant: "filled", icon: "📖", label: "Read {{state.today.label}}", full: true,
+          action: { type: "open_pdf_page", params: { documentId: "{{data.id}}", page: "{{state.today.startPage}}" } } } ] } ] }
+  }
+},
+{
+  title: "Today · All Goals", note: "app screen · uses list + repeat",
+  data: { accent: "#9b87f5" },
+  state: {
+    dateLabel: "Wednesday, 21 Oct", doneLabel: "2 of 4 done", progress: 0.5,
+    items: [
+      { goalId: "atomic-habits", icon: "📖", label: "Read p. 45–46", sub: "Atomic Habits · ≈ 4 min", checked: true },
+      { goalId: "cs229", icon: "🎓", label: "Watch Lecture 8", sub: "CS229 · 46 min left", checked: false },
+      { goalId: "water", icon: "💧", label: "Drink water 5/8", sub: "Daily habit", checked: false },
+      { goalId: "meditate", icon: "🧘", label: "Meditate 10 min", sub: "Daily habit", checked: true } ]
+  },
+  template: {
+    type: "card", accent: "{{data.accent}}",
+    child: { type: "column", gap: 10, children: [
+      { type: "row", align: "between", children: [
+        { type: "column", children: [
+          { type: "text", style: "label", value: "Today" },
+          { type: "text", style: "title", value: "{{state.dateLabel}}" } ] },
+        { type: "progress_ring", value: "{{state.progress}}", size: 56, stroke: 6, label: "{{state.doneLabel}}", compact: true } ] },
+      { type: "divider" },
+      { type: "list", items: "{{state.items}}", as: "it", item:
+        { type: "checklist_item", icon: "{{it.icon}}", label: "{{it.label}}", sublabel: "{{it.sub}}", checked: "{{it.checked}}",
+          action: { type: "open_goal", params: { goalId: "{{it.goalId}}" } } } } ] }
+  }
+},
+{
+  title: "Course · Progress Detail", note: "template: course@1 · surface: screen (section)",
+  data: { id: "cs229", accent: "#e0573f" },
+  state: {
+    progress: 0.42, pctLabel: "42%", hoursLabel: "10.5 / 25 h", lecturesLabel: "7 / 20", deadlineLabel: "71 days",
+    paceText: "Watch 2 lectures per week to finish by 31 Dec.",
+    week: [ {d:"M",s:"done"},{d:"T",s:"rest"},{d:"W",s:"today"},{d:"T",s:"rest"},{d:"F",s:""},{d:"S",s:"rest"},{d:"S",s:"rest"} ]
+  },
+  template: {
+    type: "card", accent: "{{data.accent}}",
+    child: { type: "column", gap: 14, children: [
+      { type: "row", gap: 16, children: [
+        { type: "progress_ring", value: "{{state.progress}}", size: 96, stroke: 10, label: "{{state.pctLabel}}", sublabel: "by time" },
+        { type: "column", gap: 10, expand: true, children: [
+          { type: "row", align: "between", children: [
+            { type: "stat", value: "{{state.lecturesLabel}}", label: "Lectures" },
+            { type: "stat", value: "{{state.hoursLabel}}", label: "Watched" } ] },
+          { type: "stat", value: "{{state.deadlineLabel}}", label: "Until deadline" } ] } ] },
+      { type: "week_dots", days: "{{state.week}}" },
+      { type: "text", style: "caption", value: "{{state.paceText}}" } ] }
+  }
+},
+{
+  title: "Habit · Counter", note: "template: counter@1 · shows that the same renderer handles any habit",
+  data: { id: "water", title: "Drink water", unit: "glasses", target: 8, accent: "#38bdf8" },
+  state: { count: 5, progress: 0.625, label: "5 / 8 glasses" },
+  template: {
+    type: "card", style: "tonal", accent: "{{data.accent}}",
+    child: { type: "row", gap: 14, children: [
+      { type: "progress_ring", value: "{{state.progress}}", size: 72, stroke: 8, label: "💧", compact: true },
+      { type: "column", gap: 2, expand: true, children: [
+        { type: "text", style: "subtitle", value: "{{data.title}}" },
+        { type: "text", style: "caption", value: "{{state.label}}" } ] },
+      { type: "counter",
+        decrement: { type: "log_progress", params: { goalId: "{{data.id}}", delta: -1 } },
+        increment: { type: "log_progress", params: { goalId: "{{data.id}}", delta: 1 } } } ] }
+  }
+},
+{
+  title: "Nudge · Distraction Reminder", note: "surface: notification · trigger: app_usage (Instagram 15 min)",
+  data: { id: "atomic-habits", title: "Atomic Habits", accent: "#5aa9e6" },
+  state: { today: { startPage: 45, label: "p. 45–46" }, trigger: { appLabel: "Instagram", minutes: 15 } },
+  template: {
+    type: "card", style: "notification", accent: "{{data.accent}}",
+    child: { type: "column", gap: 8, children: [
+      { type: "row", gap: 8, children: [
+        { type: "icon", name: "🎯" },
+        { type: "text", style: "caption", value: "Get On It · now" } ] },
+      { type: "text", style: "subtitle", value: "{{state.trigger.minutes}} min on {{state.trigger.appLabel}}" },
+      { type: "text", style: "body", value: "Two pages of {{data.title}} take about 4 minutes. Read {{state.today.label}} now?" },
+      { type: "row", gap: 4, children: [
+        { type: "button", variant: "text", label: "Read now",
+          action: { type: "open_pdf_page", params: { documentId: "{{data.id}}", page: "{{state.today.startPage}}" } } },
+        { type: "button", variant: "text", label: "Snooze 1 h",
+          action: { type: "snooze_nudge", params: { goalId: "{{data.id}}", minutes: 60 } } },
+        { type: "button", variant: "text", label: "Done today",
+          action: { type: "mark_done", params: { goalId: "{{data.id}}", scope: "today" } } } ] } ] }
+  }
+},
+{
+  title: "Widget · Small (2×2)", note: "surface: widget_small · rendered to an image, one tap action", wallpaper: true,
+  data: { id: "cs229", code: "CS229", accent: "#e0573f" },
+  state: { progress: 0.42, pctLabel: "42%", pace: { label: "On track", tone: "success" } },
+  template: {
+    type: "card", style: "widget-small", accent: "{{data.accent}}",
+    action: { type: "open_goal", params: { goalId: "{{data.id}}" } },
+    child: { type: "column", gap: 8, align: "center", children: [
+      { type: "progress_ring", value: "{{state.progress}}", size: 92, stroke: 9, label: "{{state.pctLabel}}", sublabel: "{{data.code}}" },
+      { type: "badge", label: "{{state.pace.label}}", tone: "{{state.pace.tone}}" } ] }
+  }
+},
+{
+  title: "Widget · Medium (4×2)", note: "surface: widget_medium · image + native 'Done' button", wallpaper: true,
+  data: { id: "atomic-habits", title: "Atomic Habits", accent: "#5aa9e6" },
+  state: { today: { startPage: 45, label: "p. 45–46" }, progress: 0.14, pctLabel: "14% · 🔥 9 days" },
+  template: {
+    type: "card", style: "widget-medium", accent: "{{data.accent}}",
+    action: { type: "open_pdf_page", params: { documentId: "{{data.id}}", page: "{{state.today.startPage}}" } },
+    child: { type: "row", gap: 14, children: [
+      { type: "media", kind: "pdf_page", width: 100, height: 140, page: "{{state.today.startPage}}" },
+      { type: "column", gap: 8, expand: true, children: [
+        { type: "text", style: "label", value: "Read today" },
+        { type: "text", style: "display", value: "{{state.today.label}}" },
+        { type: "text", style: "caption", value: "{{data.title}}" },
+        { type: "progress_bar", value: "{{state.progress}}" },
+        { type: "row", align: "between", children: [
+          { type: "text", style: "caption", value: "{{state.pctLabel}}" },
+          { type: "button", variant: "tonal", label: "✓ Done",
+            action: { type: "mark_done", params: { goalId: "{{data.id}}", scope: "today" } } } ] } ] } ] }
+  }
+},
+{
+  title: "Widget · Large composite (4×4)", note: "surface: widget_large · embeds the tile surface of 4 different goals", wallpaper: true,
+  data: { accent: "#9b87f5" },
+  state: { dateLabel: "Wed 21 Oct", doneLabel: "1 of 4 done" },
+  template: {
+    type: "card", style: "widget-large", accent: "{{data.accent}}",
+    child: { type: "column", gap: 10, children: [
+      { type: "row", align: "between", children: [
+        { type: "text", style: "subtitle", value: "Today · {{state.dateLabel}}" },
+        { type: "badge", label: "{{state.doneLabel}}", tone: "neutral" } ] },
+      { type: "grid", columns: 2, gap: 8, children: [
+        { type: "embed", goalId: "cs229", surface: "tile" },
+        { type: "embed", goalId: "atomic-habits", surface: "tile" },
+        { type: "embed", goalId: "water", surface: "tile_wide", span: 2 },
+        { type: "embed", goalId: "meditate", surface: "tile_wide", span: 2 } ] } ] }
+  }
+},
+{
+  title: "Unknown component", note: "forward compatibility · an older app meets a newer component",
+  data: { accent: "#9b87f5" }, state: {},
+  template: {
+    type: "card", accent: "{{data.accent}}",
+    child: { type: "column", gap: 8, children: [
+      { type: "text", style: "subtitle", value: "Workout plan (v2 template)" },
+      { type: "rep_tracker", sets: 4, reps: 12, fallback: { type: "text", style: "caption", value: "Update the app to log sets here." } } ] }
+  }
+}
+];
+
+/* =====================================================================
+ * GOALS  (installed goal instances; `embed` looks surfaces up here)
+ * Each embedded tile renders with its own goal's data/state scope.
+ * ===================================================================== */
+const GOALS = {
+  "cs229": {
+    data: { id: "cs229", code: "CS229", accent: "#e0573f" },
+    state: { progress: 0.42, pctLabel: "42%", next: { title: "Lecture 8", remainingLabel: "46 min", videoId: "VIDEO_ID_08", positionSec: 2052 } },
+    surfaces: { tile: {
+      type: "card", style: "tile", accent: "{{data.accent}}",
+      action: { type: "open_video", params: { provider: "youtube", videoId: "{{state.next.videoId}}", startSec: "{{state.next.positionSec}}" } },
+      child: { type: "column", gap: 6, align: "center", children: [
+        { type: "progress_ring", value: "{{state.progress}}", size: 64, stroke: 7, label: "{{state.pctLabel}}" },
+        { type: "text", style: "caption", value: "{{data.code}} · {{state.next.title}}" } ] } } }
+  },
+  "atomic-habits": {
+    data: { id: "atomic-habits", title: "Atomic Habits", accent: "#5aa9e6" },
+    state: { today: { startPage: 45, label: "p. 45–46" }, streakLabel: "🔥 9" },
+    surfaces: { tile: {
+      type: "card", style: "tile", accent: "{{data.accent}}",
+      action: { type: "open_pdf_page", params: { documentId: "{{data.id}}", page: "{{state.today.startPage}}" } },
+      child: { type: "row", gap: 10, children: [
+        { type: "media", kind: "pdf_page", width: 48, height: 66, page: "{{state.today.startPage}}" },
+        { type: "column", gap: 2, expand: true, children: [
+          { type: "text", style: "label", value: "Read" },
+          { type: "text", style: "subtitle", value: "{{state.today.label}}" },
+          { type: "text", style: "caption", value: "{{state.streakLabel}}" } ] } ] } } }
+  },
+  "water": {
+    data: { id: "water", title: "Water", accent: "#38bdf8" },
+    state: { progress: 0.625, label: "5 / 8 glasses" },
+    surfaces: { tile_wide: {
+      type: "card", style: "tile", accent: "{{data.accent}}",
+      child: { type: "row", gap: 10, children: [
+        { type: "progress_bar", value: "{{state.progress}}", expand: true },
+        { type: "text", style: "caption", value: "💧 {{state.label}}" },
+        { type: "counter",
+          decrement: { type: "log_progress", params: { goalId: "{{data.id}}", delta: -1 } },
+          increment: { type: "log_progress", params: { goalId: "{{data.id}}", delta: 1 } } } ] } } }
+  },
+  "meditate": {
+    data: { id: "meditate", accent: "#4caf7d" },
+    state: { checked: true },
+    surfaces: { tile_wide: {
+      type: "card", style: "tile", accent: "{{data.accent}}",
+      child: { type: "checklist_item", icon: "🧘", label: "Meditate 10 min", sublabel: "Daily habit", checked: "{{state.checked}}",
+        action: { type: "toggle_done", params: { goalId: "{{data.id}}" } } } } }
+  }
+};
+
+/* =====================================================================
+ * MINI RENDERER  (reference for the Flutter renderer)
+ * resolve(): replaces {{path}} bindings. A string that is exactly one
+ *            binding returns the raw value (number, bool, array, object).
+ * render():  maps `type` -> builder. Unknown type -> `fallback` or placeholder.
+ * ===================================================================== */
+function lookup(path, scope) {
+  return path.trim().split(".").reduce((o, k) => (o == null ? undefined : o[k]), scope);
+}
+function resolve(v, scope) {
+  if (typeof v === "string") {
+    const whole = v.match(/^\{\{([^}]+)\}\}$/);
+    if (whole) return lookup(whole[1], scope);
+    return v.replace(/\{\{([^}]+)\}\}/g, (_, p) => { const r = lookup(p, scope); return r == null ? "" : r; });
+  }
+  if (Array.isArray(v)) return v.map(x => resolve(x, scope));
+  if (v && typeof v === "object") { const o = {}; for (const k in v) o[k] = resolve(v[k], scope); return o; }
+  return v;
+}
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+function dispatch(action, scope) {
+  const a = resolve(action, scope);
+  const t = document.getElementById("toast");
+  t.textContent = "dispatch → " + JSON.stringify(a);
+  t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function bindAction(e, node, scope, key = "action") {
+  if (!node[key]) return;
+  e.dataset.action = "1";
+  e.addEventListener("click", ev => { ev.stopPropagation(); dispatch(node[key], scope); });
+}
+function common(e, n) { if (n.expand) e.classList.add("c-expand"); return e; }
+
+const BUILDERS = {
+  card(n, s) {
+    const e = el("div", "c-card " + (resolve(n.style, s) || ""));
+    const accent = resolve(n.accent, s); if (accent) e.style.setProperty("--accent", accent);
+    bindAction(e, n, s); e.appendChild(render(n.child, s)); return e;
+  },
+  column(n, s) {
+    const e = el("div", "c-column"); e.style.gap = (n.gap || 0) + "px";
+    if (n.align === "center") e.style.alignItems = "center";
+    (n.children || []).forEach(c => e.appendChild(render(c, s))); return e;
+  },
+  row(n, s) {
+    const e = el("div", "c-row" + (n.align ? " " + n.align : "")); e.style.gap = (n.gap || 0) + "px";
+    (n.children || []).forEach(c => e.appendChild(render(c, s))); return e;
+  },
+  text(n, s) { return el("p", `c-text t-${n.style || "body"}${n.maxLines === 1 ? " clamp1" : ""}`, escapeHtml(resolve(n.value, s))); },
+  icon(n, s) { return el("div", "c-icon" + (n.box ? " box" : ""), resolve(n.name, s)); },
+  badge(n, s) { return el("span", "c-badge tone-" + (resolve(n.tone, s) || "neutral"), escapeHtml(resolve(n.label, s))); },
+  divider() { return el("div", "c-divider"); },
+  progress_bar(n, s) {
+    const e = el("div", "c-bar"); const f = el("div"); f.style.width = Math.round(resolve(n.value, s) * 100) + "%"; e.appendChild(f); return e;
+  },
+  progress_ring(n, s) {
+    const size = n.size || 80, sw = n.stroke || 8, r = (size - sw) / 2, c = 2 * Math.PI * r, v = resolve(n.value, s);
+    const e = el("div", "c-ring"); e.style.width = e.style.height = size + "px";
+    e.innerHTML = `<svg width="${size}" height="${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="${sw}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${sw}"
+        stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - v)}"/></svg>`;
+    const label = resolve(n.label, s), sub = resolve(n.sublabel, s);
+    const inner = el("div", "inner", `<b style="${n.compact ? "font-size:12px" : ""}">${escapeHtml(label || "")}</b>${sub ? `<span>${escapeHtml(sub)}</span>` : ""}`);
+    if (n.compact && label && label.length > 4) { inner.innerHTML = ""; e.title = label; }
+    e.appendChild(inner); return e;
+  },
+  button(n, s) {
+    const icon = resolve(n.icon, s);
+    const e = el("button", `c-button ${n.variant || "filled"}${n.full ? " full" : ""}`, (icon ? icon + " " : "") + escapeHtml(resolve(n.label, s)));
+    bindAction(e, n, s); return common(e, n);
+  },
+  stat(n, s) { return el("div", "c-stat", `<b>${escapeHtml(resolve(n.value, s))}</b><span>${escapeHtml(resolve(n.label, s))}</span>`); },
+  list(n, s) {
+    const e = el("div", "c-column");
+    (resolve(n.items, s) || []).forEach(item => e.appendChild(render(n.item, { ...s, [n.as || "item"]: item }))); return e;
+  },
+  checklist_item(n, s) {
+    const checked = resolve(n.checked, s);
+    const e = el("div", "c-check" + (checked ? " checked" : ""),
+      `<div class="box">${checked ? "✓" : ""}</div><div class="c-icon">${resolve(n.icon, s) || ""}</div>
+       <div class="c-column c-expand"><p class="c-text t-body lbl">${escapeHtml(resolve(n.label, s))}</p>
+       <p class="c-text t-caption">${escapeHtml(resolve(n.sublabel, s) || "")}</p></div><span class="t-caption">›</span>`);
+    bindAction(e, n, s); return e;
+  },
+  media(n, s) {
+    const kind = n.kind, e = el("div", "c-media " + (kind === "video" ? "video" : "pdf"));
+    e.style.width = n.width + "px"; e.style.height = n.height + "px";
+    if (kind === "video") {
+      const p = resolve(n.progress, s) || 0;
+      e.innerHTML = `<div class="play">▶</div><div class="ts">${escapeHtml(resolve(n.timestamp, s) || "")}</div><div class="seek"><div style="width:${p*100}%"></div></div>`;
+    } else {
+      let lines = '<div class="ln h"></div>';
+      for (let i = 0; i < Math.floor((n.height - 30) / 9); i++) lines += `<div class="ln" style="width:${70 + (i * 37) % 30}%"></div>`;
+      e.innerHTML = lines + `<div class="pg">${escapeHtml(resolve(n.page, s))}</div>`;
+    }
+    return e;
+  },
+  week_dots(n, s) {
+    const e = el("div", "c-dots");
+    (resolve(n.days, s) || []).forEach(d => e.appendChild(el("div", "d " + d.s, `${d.d}<i></i>`))); return e;
+  },
+  grid(n, s) {
+    const e = el("div", "c-grid"); e.style.gap = (n.gap || 0) + "px";
+    e.style.gridTemplateColumns = `repeat(${n.columns || 2}, 1fr)`;
+    (n.children || []).forEach(c => { const x = render(c, s); if (c.span) x.style.gridColumn = `span ${c.span}`; e.appendChild(x); });
+    return e;
+  },
+  embed(n) {
+    const g = GOALS[n.goalId], tree = g && g.surfaces[n.surface];
+    if (!tree) return el("div", "c-unknown", `Missing goal or surface: ${escapeHtml(n.goalId)}/${escapeHtml(n.surface)}`);
+    return render(tree, { data: g.data, state: g.state });
+  },
+  counter(n, s) {
+    const e = el("div", "c-counter"); const minus = el("button", null, "−"), plus = el("button", null, "+");
+    minus.addEventListener("click", () => dispatch(n.decrement, s)); plus.addEventListener("click", () => dispatch(n.increment, s));
+    e.append(minus, plus); return e;
+  }
+};
+function escapeHtml(v) { return String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function render(node, scope) {
+  const b = BUILDERS[node.type];
+  if (b) return common(b(node, scope), node);
+  if (node.fallback) return render(node.fallback, scope);
+  return el("div", "c-unknown", `Unsupported component: ${escapeHtml(node.type)}`);
+}
+
+/* ---- page ---- */
+const root = document.getElementById("samples");
+SAMPLES.forEach(sm => {
+  const sec = el("section", "sample");
+  sec.appendChild(el("h2", null, `${escapeHtml(sm.title)}<small>${escapeHtml(sm.note)}</small>`));
+  const stage = el("div", "stage" + (sm.wallpaper ? " wallpaper" : ""));
+  stage.appendChild(render(sm.template, { data: sm.data, state: sm.state }));
+  sec.appendChild(stage);
+  sec.appendChild(el("pre", null, escapeHtml(JSON.stringify({ template: sm.template, data: sm.data, state: sm.state }, null, 2))));
+  root.appendChild(sec);
+});
+</script>
+</body>
+</html>
