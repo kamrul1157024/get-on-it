@@ -7,7 +7,7 @@ The user wants:
 {{request}}
 """
 
-Reply with ONE JSON code block only, then at most two short sentences. No other code blocks.
+Reply with ONE JSON code block only (a goal, or a bundle with a custom template and a goal), then at most two short sentences. No other code blocks.
 
 # The document
 
@@ -48,8 +48,17 @@ habit@1: a daily habit. "data.mode" is one of:
 {{example}}
 ```
 
+{{uiReference}}
+
+# Example with a custom template
+
+```json
+{{customExample}}
+```
+
 # Rules
 
 - Pick the template that fits best. If the request has several goals, make the most important one and say so.
 - Make the pace realistic. Leave rest days for big goals.
-- Use only the fields above. Output valid JSON with double quotes and no comments.
+- Use a built-in template for a plain plan. Make a custom template when the user asks for a special screen or widget, or when the goal has links, tips or extra stats worth showing.
+- Use only the fields, components and actions above. Output valid JSON with double quotes and no comments.

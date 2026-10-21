@@ -143,4 +143,45 @@ void main() {
     expect(find.text('outer'), findsNothing);
     expect(find.text('Goal removed'), findsOneWidget);
   });
+
+  testWidgets('a row gives full-width children a share instead of failing the layout', (tester) async {
+    // AI-made templates put these in rows; one unbounded child blanked the
+    // whole goal screen.
+    await render(tester, {
+      'type': 'row',
+      'gap': 8,
+      'children': [
+        {
+          'type': 'button',
+          'full': true,
+          'label': '+10',
+          'action': {'type': 'notify'},
+        },
+        {'type': 'progress_bar', 'value': 0.5},
+        {'type': 'number_input', 'label': 'Pages'},
+        {
+          'type': 'week_dots',
+          'days': [
+            {'d': 'M', 's': 'done'},
+          ],
+        },
+        {
+          'type': 'heatmap',
+          'cells': [
+            {'level': 1},
+          ],
+        },
+        {
+          'type': 'grid',
+          'columns': 2,
+          'children': [
+            {'type': 'text', 'value': 'cell'},
+          ],
+        },
+      ],
+    }, const {});
+    expect(tester.takeException(), isNull);
+    expect(find.text('+10'), findsOneWidget);
+    expect(find.text('cell'), findsOneWidget);
+  });
 }
