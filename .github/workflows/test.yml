@@ -1,0 +1,87 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push supersedes whatever was running for the same ref.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+        working-directory: mobile
+
+      # The drift code is committed; this fails if it no longer matches the
+      # tables, which would otherwise surface as a confusing runtime error.
+      - name: Generated code is up to date
+        working-directory: mobile
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/
+
+      # Infos are not failures: CI tracks stable, which can run ahead of the
+      # SDK on a developer's machine. Warnings and errors still fail.
+      - run: flutter analyze --no-fatal-infos
+        working-directory: mobile
+
+      # Unit, widget, and the host flow tests (test/app_flow_test.dart). The
+      # runner has clang, which pdfrx's native build hook needs.
+      - run: flutter test
+        working-directory: mobile
+
+  e2e:
+    name: E2E (Android emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # The emulator needs hardware acceleration; GitHub's Linux runners have
+      # KVM, but only root may open it until this rule says otherwise.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+        working-directory: mobile
+
+      - name: Run integration tests on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          working-directory: mobile
+          script: flutter test integration_test -d emulator-5554

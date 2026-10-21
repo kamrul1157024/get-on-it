@@ -1,0 +1,156 @@
+name: Release
+
+# Cut by hand, on purpose. A merge to main is not a release: work collects
+# there until somebody decides the batch is worth shipping and presses the
+# button.
+#
+# No version to type either — only which part of the number moves. The base is
+# the newest release, so the number cannot be mistyped, cannot skip, and cannot
+# collide with a release that is already out.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the number this release moves
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The tags and the history behind them: the guard below asks whether
+          # anything has landed since the newest one.
+          fetch-depth: 0
+
+      - id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v=$(./scripts/next-version.sh "${{ inputs.bump }}")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+          # A tag without a release behind it would otherwise be reused, and
+          # this release would carry somebody else's commit.
+          if git rev-parse "v$v" > /dev/null 2>&1; then
+            echo "Tag v$v already exists, but no release is published for it." >&2
+            echo "Delete the tag or pick a different part of the number." >&2
+            exit 1
+          fi
+
+          # Pressing twice in a row would otherwise cut a second release with
+          # nothing in it.
+          last=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$last" ]; then
+            count=$(git rev-list "$last..HEAD" --count)
+            if [ "$count" -eq 0 ]; then
+              echo "Nothing to release: no commits since $last." >&2
+              exit 1
+            fi
+            echo "Releasing **v$v** (\`${{ inputs.bump }}\`) — $count commits since $last." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Releasing **v$v** (\`${{ inputs.bump }}\`) — the first release." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  apk:
+    name: Android APK
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `make apk-release` derives the Android build number from
+          # `git rev-list --count HEAD`, which a shallow clone reports as 1.
+          fetch-depth: 0
+
+      # A release signed with the debug key could never be upgraded by one
+      # signed with the real key, so a missing keystore stops the release.
+      - name: Check signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          missing=""
+          for name in KEYSTORE_BASE64 KEY_ALIAS KEY_PASSWORD STORE_PASSWORD; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing" >&2
+            echo "See docs/release.md for how to create the keystore and set them." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+        working-directory: mobile
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > mobile/android/app/getonit-release.jks
+
+      - name: Build release APK
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEYSTORE_PATH: getonit-release.jks
+        run: make apk-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [version, apk]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # The name is version-free on purpose, so that
+      # releases/latest/download/getonit.apk always resolves.
+      - name: Stage assets
+        run: |
+          mkdir -p dist
+          mv artifacts/apk/app-release.apk dist/getonit.apk
+          (cd dist && sha256sum getonit.apk > getonit.apk.sha256)
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make release-publish REPO="${{ github.repository }}"

@@ -1,0 +1,10 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "water",
+  "template": "habit@1",
+  "title": "Drink water",
+  "accent": "#38bdf8",
+  "icon": "💧",
+  "data": { "mode": "count", "unit": "glasses", "target": 8, "period": "day" }
+}
