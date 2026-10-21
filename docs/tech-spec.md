@@ -315,7 +315,7 @@ Every node can have a `visible` property. The value is a binding to a boolean, f
 | Component | Properties |
 |---|---|
 | `column` | `children`, `gap`, `align` (`start`, `center`, `end`, `stretch`) |
-| `row` | `children`, `gap`, `align` (`center`, `top`, `between`) |
+| `row` | `children`, `gap`, `align` (`center`, `top`, `between`). A document cannot know the screen width. So in a row, `text`, `column`, `row`, `stat`, `badge`, `list`, and `section` children can shrink and wrap. Controls keep their natural size. |
 | `card` | `child`, `style` (`elevated`, `tonal`, `outlined`, `tile`), `accent`, `action` |
 | `grid` | `children`, `columns`, `gap`. A child can have `span`. |
 | `list` | `items` (binding to an array), `as`, `item` (a node), `maxItems` |
@@ -412,6 +412,8 @@ All engines return these keys:
 | `pctLabel` | string | For example `"42%"` |
 | `progressLabel` | string | For example `"7 of 20 lectures"` |
 | `todayComplete` | boolean | True when today's target is met |
+| `todayPending` | boolean | The opposite of `todayComplete`. Bindings cannot negate a value, so templates need both. |
+| `isComplete` | boolean | True when `progress` is 1 |
 | `streak` | number | Consecutive completed scheduled days |
 | `streakLabel` | string | For example `"9 days"` |
 | `pace.status` | string | `ahead`, `on_track`, `behind`, or `none` |
@@ -470,7 +472,7 @@ All engines return these keys:
 - For `physical` books, the user enters the page number manually.
 - Today is complete when the last page read reaches today's end page.
 
-**Extra state:** `today` (`startPage`, `endPage`, `label`, `minutesLabel`), `lastPage`, `finishLabel`, `needsFile` (true when the PDF link is missing).
+**Extra state:** `today` (`startPage`, `endPage`, `label`, `minutesLabel`), `lastPage`, `nextPage`, `perDay`, `finishLabel`, `needsFile` (true when the PDF link is missing), `canOpen`, `isPhysical`, `isUrl`.
 
 ### 7.5 `count` engine (habit template)
 
@@ -492,6 +494,12 @@ All engines return these keys:
 
 **Extra state:** `steps` (with `done`), `doneCount`.
 
+### 7.7a `by_mode` (engine selection)
+
+A template can set `"engine": "by_mode"`. Then each goal selects the engine with `data.mode`. The `habit` template uses this, so one template covers count, check, and checklist habits.
+
+These engines also return mode flags (`isCount`, `isCheck`, `isChecklist`). A template uses them with `visible` to show the correct control.
+
 ### 7.8 Events
 
 The app stores progress only as events. The engines compute `state` from the events. Events are never edited. A correction is a new event.
@@ -508,7 +516,76 @@ The app stores progress only as events. The engines compute `state` from the eve
 | `day_skipped` | `date`, `reason` | Emergency exit, freeze day |
 | `reminder_outcome` | `level`, `outcome` | Alarm system |
 
-Common fields: `id` (UUID), `t` (UTC timestamp), `goal`, `device`.
+Common fields: `id` (UUID), `t` (UTC timestamp), `tz` (UTC offset in minutes at that moment), `goal`, `device`.
+
+### 7.9 State calculation
+
+**Rule:** the app stores only events. It never stores a calculated value such as "progress = 42%". It calculates the state from the events each time.
+
+**Pipeline**
+
+1. A user action writes an event.
+2. The database stream reports the new event for that goal.
+3. The goal's engine reads the goal, its data, its linked files, and all its events. It returns a new state.
+4. The renderer fills the template bindings with the state.
+5. The same state goes to every surface (screens, widgets, reminders).
+
+The engine is a pure function. The same input always gives the same output.
+
+**Why events**
+
+- A re-import keeps progress, because events refer to item IDs.
+- A change to the plan (for example, a new deadline) recalculates everything.
+- Streaks, heatmaps, and a re-plan with Claude use the same history.
+- Undo is a new event. Nothing is overwritten.
+- A later multi-device sync only needs to combine event lists.
+
+**Days**
+
+- A day is a whole day in the user's local time zone. The engine stores days as day numbers.
+- **My day starts at** (Settings, 00:00–06:00) moves the day boundary. With 04:00, work at 01:00 counts for the day before.
+- Each event stores its UTC time and the UTC offset at that moment. A trip to another time zone does not move old events to another day.
+
+**Fixed daily targets**
+
+Today's target comes from the progress **before** today. For example, if the user had read to page 44 before today, today's pages are 45–46. When the user reads page 45, the target stays 45–46.
+
+**Video positions**
+
+- **Resume** uses the newest position.
+- **Watched amount** and **done** use the highest position. Re-watching a part never lowers progress.
+- **Watch time today** counts forward movement that is not faster than the clock. A seek forward does not count.
+
+**Streak**
+
+The engine goes back day by day:
+- A complete scheduled day adds 1.
+- A day that is not scheduled, or a `day_skipped` day, is passed over. It does not break the streak.
+- A missed scheduled day ends the streak.
+- Today adds 1 when it is complete. Today never breaks the streak while it is in progress.
+
+**Pace**
+
+```
+expected = scheduled days passed ÷ all scheduled days from start to deadline
+actual   = progress
+```
+
+The tolerance is one day of work. The result is `ahead`, `on_track`, or `behind` with the number of days, for example "2 days behind". The `page_range` engine also raises the daily target when the goal is behind, so the user can still finish by the deadline.
+
+The start of a goal is `startDate`. If the goal has no `startDate`, the start is the day of the first import.
+
+**When the state is recalculated**
+
+| Trigger | Scope |
+|---|---|
+| A new event | That goal |
+| A new goal version (import) | That goal |
+| A linked file | That goal |
+| A new day (a timer at the day boundary, and when the app resumes) | All goals |
+| A change to **My day starts at** | All goals |
+
+**Performance:** a full recalculation from all events takes milliseconds, also for a year of events. Snapshots are not necessary in v1.
 
 ## 8. Actions
 
@@ -528,11 +605,12 @@ The renderer resolves the bindings in `params` when the user triggers the action
 | `open_video` | `provider`, `videoId`, `startSec`, `goalId`, `itemId` | Opens the in-app player at the position |
 | `open_external` | `url` | Opens the URL in an external app (for example the YouTube app) |
 | `open_pdf_page` | `documentId`, `page` | Opens the PDF reader at the page. Asks for the file if the link is missing. |
+| `link_file` | `goalId`, `documentId` | Lets the user select a PDF. The app copies it into the app's private storage and links it to the goal. |
 | `mark_done` | `goalId`, `itemId` or `scope: "today"` | Writes `item_done`, or marks today complete |
-| `toggle_done` | `goalId`, `stepId` (optional) | Toggles a check or a checklist step |
+| `toggle_done` | `goalId`, `stepId` or `itemId` (optional) | Toggles a check, a checklist step, or a course item |
 | `log_progress` | `goalId`, `delta` or `value` | Writes `count_delta` or `page_reached` |
-| `start_timer` | `goalId`, `minutes` | Starts a timer session |
-| `snooze_reminder` | `goalId`, `minutes` | Snoozes the current reminder or nudge |
+| `start_timer` | `goalId`, `minutes` | Starts a timer session (not in the first build) |
+| `snooze_reminder` | `goalId`, `minutes` | Snoozes the current reminder or nudge (not in the first build) |
 | `notify` | `message` | Shows a short message |
 
 ### 8.3 Action rules
@@ -650,6 +728,14 @@ Rules:
 - If a goal is deleted, the tile shows "Goal removed".
 - When the widget gets smaller, the app removes the last tiles first.
 - v1 provides an in-app editor for `manual` dashboards with preset layouts: 2×2, 1 wide + 2 square, and 4 wide rows.
+
+### 10.5a As built
+
+- **Today** widget (`TodayWidgetReceiver`): a header, then each goal's `tile_wide` surface. Open goals come first.
+- **Goal** widget (`GoalWidgetReceiver`): one goal, selected in a picker when the user adds the widget. It uses `widget.small` or `tile` when narrow, and `widget.medium` or `tile_wide` when wide.
+- Flutter writes the resolved trees with `home_widget`: `today`, `goal:<id>:small`, `goal:<id>:medium`, and `goals`.
+- Buttons with `mark_done`, `toggle_done`, or `log_progress` run a Dart callback in the background (`widgetBackgroundCallback`). The callback writes the event and redraws the widgets. Other actions open the app with `getonit://action?json=<action>`.
+- The database is shared across isolates, so the app's screens see widget taps at once.
 
 ### 10.6 Update policy
 
@@ -800,7 +886,7 @@ The user can select a PDF from Drive with the Google Picker. The app stores the 
 |---|---|
 | Share sheet | Intent filters for `text/plain` and `application/json` |
 | Open file | Intent filter for `application/json` and the `.getonit.json` extension |
-| Paste | "Paste plan" button on the Today screen |
+| Paste | "Import a plan" button on the Today screen, then "Paste" |
 | Drive | Open a file from the Drive app with "Open with → Get On It" |
 
 ### 14.2 Validation
@@ -910,6 +996,22 @@ getonit-planner/
 | **Phase 2** | Multi-device sync, progress export and re-plan, encryption, dashboards from Claude, interrupt screen |
 
 M8 can run in parallel with M2–M7, because it depends only on the schemas from M1.
+
+### 19.1 Status (2026-10-21)
+
+All milestones M1–M8 are built in PR #1. These parts differ from the plan or are not built:
+
+| Item | Status |
+|---|---|
+| Widgets: `progress_ring` | Glance has no determinate ring. The widget shows the label over a short bar. Flutter does not render images for widgets. |
+| Widgets: dashboard editor (§10.5 `manual` mode) | Not built. The **Today** widget uses `auto_today`. The **Goal** widget shows one goal that the user selects. |
+| Widgets: `heatmap`, `image` | Not drawn in widgets. |
+| Drive: real Google sign-in | Built, but not tested. It needs the OAuth clients in docs/drive.md. Tests use a fake Drive API. |
+| Drive: PDF from Drive (§13.5) | Not built. Local PDFs are copied into app storage. |
+| Reminders: Do Not Disturb exception (§11.5) | Not built. Android applies DND to the reminder channels. |
+| Components `tabs`, `timer`, `video_player`, `pdf_viewer` (§6.5) | Not built. The player and the reader are screens, opened by actions. |
+| Actions `start_timer`, `snooze_reminder` (§8.2) | Not built. Snooze is a notification button. |
+| Course videos with embedding off | Built (`embeddable: false`). Such videos open on YouTube. All CS229 videos have embedding off. |
 
 ## 20. Risks
 

@@ -1,0 +1,40 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "morning-routine",
+  "template": "habit@1",
+  "title": "Morning routine",
+  "accent": "#f4a259",
+  "icon": "🌅",
+  "schedule": {
+    "days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  "reminders": {
+    "preset": "gentle",
+    "time": "07:15"
+  },
+  "data": {
+    "mode": "checklist",
+    "resets": "daily",
+    "steps": [
+      {
+        "id": "water",
+        "title": "Drink a glass of water"
+      },
+      {
+        "id": "stretch",
+        "title": "Stretch for 5 minutes"
+      },
+      {
+        "id": "plan",
+        "title": "Write the top 3 tasks for today"
+      }
+    ]
+  }
+}

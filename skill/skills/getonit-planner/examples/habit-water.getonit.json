@@ -1,0 +1,19 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "water",
+  "template": "habit@1",
+  "title": "Drink 8 glasses of water",
+  "accent": "#38bdf8",
+  "icon": "💧",
+  "reminders": {
+    "preset": "gentle",
+    "time": "11:00"
+  },
+  "data": {
+    "mode": "count",
+    "unit": "glasses",
+    "target": 8,
+    "period": "day"
+  }
+}

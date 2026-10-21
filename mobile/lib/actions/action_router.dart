@@ -1,0 +1,232 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../app/providers.dart';
+import '../core/events/goal_event.dart';
+import '../data/repository.dart';
+import '../engines/engine.dart';
+import '../features/goal/goal_screen.dart';
+import '../features/player/player_screen.dart';
+import '../features/reader/reader_screen.dart';
+
+/// Picks a PDF for a goal. Tests replace it; the real one opens the system
+/// file picker and copies the file into app storage.
+final pdfPickerProvider = Provider<Future<String?> Function(String goalId)>(
+  (ref) => (goalId) async {
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    final path = picked.firstOrNull?.path;
+    if (path == null) return null;
+    final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/books');
+    await dir.create(recursive: true);
+    final target = '${dir.path}/$goalId.pdf';
+    await File(path).copy(target);
+    return target;
+  },
+);
+
+/// Opens a link in another app. Tests replace it, because the real one leaves
+/// the app.
+final externalLauncherProvider = Provider<Future<void> Function(Uri url)>(
+  (ref) =>
+      (url) => launchUrl(url, mode: LaunchMode.externalApplication),
+);
+
+/// Maps action types to handlers. Spec §8.
+class ActionRouter {
+  ActionRouter(this.context, this.ref);
+
+  final BuildContext context;
+  final WidgetRef ref;
+
+  Future<void> call(Map<String, Object?> action) async {
+    final params = (action['params'] as Map?)?.cast<String, Object?>() ?? const {};
+    final repo = ref.read(repositoryProvider);
+    final goalId = params['goalId'] as String?;
+
+    switch (action['type']) {
+      case 'open_goal':
+        if (goalId != null) _push(GoalScreen(goalId: goalId));
+      case 'open_video':
+        final videoId = params['videoId'] as String?;
+        if (videoId == null || goalId == null) return;
+        if (params['embeddable'] == false) {
+          final start = asNum(params['startSec'])?.toInt() ?? 0;
+          await ref.read(externalLauncherProvider)(Uri.parse('https://www.youtube.com/watch?v=$videoId&t=${start}s'));
+          _snack('This video plays on YouTube. Come back and tap Mark done when you finish.');
+          return;
+        }
+        _push(
+          PlayerScreen(
+            goalId: goalId,
+            itemId: params['itemId'] as String?,
+            videoId: videoId,
+            startSec: asNum(params['startSec'])?.toInt() ?? 0,
+          ),
+        );
+      case 'open_pdf_page':
+        final id = (params['documentId'] ?? goalId) as String?;
+        if (id == null) return;
+        _push(ReaderScreen(goalId: id, page: asNum(params['page'])?.toInt() ?? 1));
+      case 'open_external':
+        final url = Uri.tryParse(params['url'] as String? ?? '');
+        if (url != null && (url.scheme == 'https' || url.scheme == 'vnd.youtube')) {
+          await ref.read(externalLauncherProvider)(url);
+        }
+      case 'link_file':
+        final id = (params['documentId'] ?? goalId) as String?;
+        if (id == null) return;
+        final path = await ref.read(pdfPickerProvider)(id);
+        if (path != null) await repo.linkFile(id, id, 'local_path', path);
+      case 'mark_done':
+        if (goalId == null) return;
+        final item = params['itemId'] as String?;
+        if (item != null) {
+          await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': true});
+        } else {
+          await _completeToday(goalId);
+        }
+      case 'toggle_done':
+        if (goalId == null) return;
+        await _toggle(goalId, params);
+      case 'log_progress':
+        if (goalId == null) return;
+        final delta = asNum(params['delta']);
+        final value = asNum(params['value']);
+        if (delta != null) {
+          await repo.addEvent(goalId, EventType.countDelta, {'delta': delta});
+        } else if (value != null) {
+          await repo.addEvent(goalId, EventType.pageReached, {'page': value.toInt()});
+        }
+      case 'notify':
+        _snack(params['message'] as String? ?? '');
+      default:
+        debugPrint('Unknown action: ${action['type']}');
+    }
+  }
+
+  void _push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
+  void _snack(String message) {
+    if (message.isEmpty) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _completeToday(String goalId) async {
+    final view = ref.read(goalViewProvider(goalId));
+    if (view != null) await completeToday(ref.read(repositoryProvider), view);
+  }
+
+  Future<void> _toggle(String goalId, Map<String, Object?> params) async {
+    final view = ref.read(goalViewProvider(goalId));
+    if (view != null) await toggleDone(ref.read(repositoryProvider), view, params);
+  }
+}
+
+/// "Done today" means something different for each engine. Used by the
+/// mark_done action and by the reminder "Done" button.
+Future<void> completeToday(Repository repo, GoalView view) async {
+  final goalId = view.goal.id;
+  final s = view.state;
+  switch (s['mode'] ?? view.template?.engine) {
+    case 'check':
+      if (s['avoid'] != true) await repo.addEvent(goalId, EventType.check, {'checked': true});
+    case 'count':
+      final left = ((s['target'] as num? ?? 0) - (s['count'] as num? ?? 0)).toInt();
+      if (left > 0) await repo.addEvent(goalId, EventType.countDelta, {'delta': left});
+    case 'checklist':
+      for (final step in (s['steps'] as List? ?? const []).whereType<Map>()) {
+        if (step['done'] != true) {
+          await repo.addEvent(goalId, EventType.stepDone, {'step': step['id'], 'done': true});
+        }
+      }
+    case 'page_range':
+      final end = (s['today'] as Map?)?['endPage'];
+      if (end is int) await repo.addEvent(goalId, EventType.pageReached, {'page': end});
+    case 'video_series':
+      final next = (s['next'] as Map?)?['id'];
+      if (next is String) await repo.addEvent(goalId, EventType.itemDone, {'item': next, 'done': true});
+  }
+}
+
+/// The one action that starts today's work for a goal: the next video, today's
+/// pages, or the goal screen. Used by alarms and nudges.
+Map<String, Object?> startWorkAction(GoalView view) {
+  final s = view.state;
+  final id = view.goal.id;
+  final next = s['next'] as Map?;
+  if (next != null && next['isVideo'] == true) {
+    return {
+      'type': 'open_video',
+      'params': {
+        'provider': 'youtube',
+        'videoId': next['videoId'],
+        'startSec': next['positionSec'],
+        'goalId': id,
+        'itemId': next['id'],
+        'embeddable': next['embeddable'],
+      },
+    };
+  }
+  if (s['canOpen'] == true) {
+    return {
+      'type': 'open_pdf_page',
+      'params': {'documentId': id, 'page': (s['today'] as Map?)?['startPage']},
+    };
+  }
+  return {
+    'type': 'open_goal',
+    'params': {'goalId': id},
+  };
+}
+
+/// Toggles a checklist step, a course item, or a check habit.
+Future<void> toggleDone(Repository repo, GoalView view, Map<String, Object?> params) async {
+  final goalId = view.goal.id;
+  final s = view.state;
+  final step = params['stepId'] as String?;
+  final item = params['itemId'] as String?;
+  bool doneIn(String key, String id) =>
+      (s[key] as List? ?? const []).whereType<Map>().firstWhere((x) => x['id'] == id, orElse: () => const {})['done'] ==
+      true;
+  if (step != null) {
+    await repo.addEvent(goalId, EventType.stepDone, {'step': step, 'done': !doneIn('steps', step)});
+  } else if (item != null) {
+    await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': !doneIn('items', item)});
+  } else {
+    await repo.addEvent(goalId, EventType.check, {'checked': s['checked'] != true});
+  }
+}
+
+/// Actions that only write events; widgets run these without opening the app.
+const dataActions = {'mark_done', 'toggle_done', 'log_progress'};
+
+/// Runs a data action against the database directly. Used by the widget
+/// background callback, which has no screen.
+Future<void> runDataAction(Repository repo, GoalView view, Map<String, Object?> action) async {
+  final params = (action['params'] as Map?)?.cast<String, Object?>() ?? const {};
+  final goalId = view.goal.id;
+  switch (action['type']) {
+    case 'mark_done':
+      final item = params['itemId'] as String?;
+      if (item != null) {
+        await repo.addEvent(goalId, EventType.itemDone, {'item': item, 'done': true});
+      } else {
+        await completeToday(repo, view);
+      }
+    case 'toggle_done':
+      await toggleDone(repo, view, params);
+    case 'log_progress':
+      final delta = asNum(params['delta']);
+      final value = asNum(params['value']);
+      if (delta != null) {
+        await repo.addEvent(goalId, EventType.countDelta, {'delta': delta});
+      } else if (value != null) {
+        await repo.addEvent(goalId, EventType.pageReached, {'page': value.toInt()});
+      }
+  }
+}

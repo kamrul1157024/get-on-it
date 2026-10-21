@@ -1,0 +1,159 @@
+{
+  "kind": "template",
+  "schemaVersion": "1.0",
+  "id": "course",
+  "version": "1.3.0",
+  "title": "Course Complete",
+  "engine": "video_series",
+  "dataSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["items"],
+    "properties": {
+      "provider": { "enum": ["youtube"] },
+      "playlistUrl": { "type": "string", "pattern": "^https://" },
+      "completionThreshold": { "type": "number", "minimum": 0.5, "maximum": 1 },
+      "dailyTargetMinutes": { "type": "number", "minimum": 1 },
+      "milestones": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "title"],
+          "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "afterItem": { "type": "string" } }
+        }
+      },
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["id", "title"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "kind": { "enum": ["video", "task"] },
+            "title": { "type": "string", "minLength": 1 },
+            "videoId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{6,20}$" },
+            "durationSec": { "type": "number", "minimum": 1 },
+            "week": { "type": "integer", "minimum": 1 },
+            "url": { "type": "string", "pattern": "^https://" },
+            "embeddable": { "type": "boolean" }
+          },
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "task" } } },
+          "then": {},
+          "else": { "required": ["videoId", "durationSec"] }
+        }
+      }
+    }
+  },
+  "surfaces": {
+    "screen": {
+      "type": "column", "gap": 16, "children": [
+        {
+          "type": "card", "id": "up-next", "visible": "{{state.hasNext}}",
+          "child": { "type": "column", "gap": 14, "children": [
+            { "type": "row", "gap": 10, "children": [
+              { "type": "icon", "name": "{{goal.icon}}", "box": true },
+              { "type": "column", "expand": true, "children": [
+                { "type": "text", "style": "label", "value": "Up next" },
+                { "type": "text", "style": "subtitle", "value": "{{goal.title}}", "maxLines": 1 }
+              ]},
+              { "type": "badge", "visible": "{{state.pace.label}}", "label": "{{state.pace.label}}", "tone": "{{state.pace.tone}}" }
+            ]},
+            { "type": "row", "gap": 12, "align": "top", "children": [
+              { "type": "media", "kind": "video", "visible": "{{state.next.isVideo}}", "width": 128, "height": 72,
+                "videoId": "{{state.next.videoId}}", "progress": "{{state.next.watched}}", "timestamp": "{{state.next.positionLabel}}" },
+              { "type": "column", "gap": 4, "expand": true, "children": [
+                { "type": "text", "style": "body", "value": "{{state.next.title}}" },
+                { "type": "text", "style": "caption", "value": "{{state.next.sub}}" },
+                { "type": "text", "style": "caption", "visible": "{{state.next.isVideo}}",
+                  "value": "Resume at {{state.next.positionLabel}} · {{state.next.remainingLabel}}" }
+              ]}
+            ]},
+            { "type": "column", "gap": 6, "children": [
+              { "type": "progress_bar", "value": "{{state.progress}}" },
+              { "type": "text", "style": "caption", "value": "{{state.progressLabel}}" }
+            ]},
+            { "type": "row", "gap": 8, "children": [
+              { "type": "button", "variant": "filled", "label": "▶ {{state.next.resumeLabel}}", "expand": true, "visible": "{{state.next.isVideo}}",
+                "action": { "type": "open_video", "params": {
+                  "provider": "youtube", "videoId": "{{state.next.videoId}}", "startSec": "{{state.next.positionSec}}",
+                  "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}", "embeddable": "{{state.next.embeddable}}" } } },
+              { "type": "button", "variant": "filled", "label": "Open task", "expand": true, "visible": "{{state.next.url}}",
+                "action": { "type": "open_external", "params": { "url": "{{state.next.url}}" } } },
+              { "type": "button", "variant": "tonal", "label": "Mark done",
+                "action": { "type": "mark_done", "params": { "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}" } } }
+            ]}
+          ]}
+        },
+        {
+          "type": "card", "visible": "{{state.isComplete}}", "style": "tonal",
+          "child": { "type": "text", "style": "title", "value": "Course complete 🎉" }
+        },
+        {
+          "type": "card", "id": "progress",
+          "child": { "type": "column", "gap": 14, "children": [
+            { "type": "row", "gap": 16, "children": [
+              { "type": "progress_ring", "value": "{{state.progress}}", "size": 96, "stroke": 10,
+                "label": "{{state.pctLabel}}", "sublabel": "by time" },
+              { "type": "column", "gap": 10, "expand": true, "children": [
+                { "type": "row", "align": "between", "children": [
+                  { "type": "stat", "value": "{{state.lecturesLabel}}", "label": "Videos" },
+                  { "type": "stat", "value": "{{state.hoursLabel}}", "label": "Watched" }
+                ]},
+                { "type": "row", "align": "between", "children": [
+                  { "type": "stat", "value": "{{state.streakLabel}}", "label": "Streak" },
+                  { "type": "stat", "visible": "{{goal.deadline}}", "value": "{{state.deadlineLabel}}", "label": "Until deadline" }
+                ]}
+              ]}
+            ]},
+            { "type": "week_dots", "days": "{{state.week}}" },
+            { "type": "text", "style": "caption", "visible": "{{state.paceText}}", "value": "{{state.paceText}}" }
+          ]}
+        },
+        {
+          "type": "section", "title": "Lectures",
+          "child": { "type": "card", "child": {
+            "type": "list", "items": "{{state.items}}", "as": "it",
+            "item": { "type": "column", "children": [
+              { "type": "checklist_item", "visible": "{{it.isVideo}}", "label": "{{it.title}}", "sublabel": "{{it.sub}}", "checked": "{{it.done}}",
+                "action": { "type": "open_video", "params": {
+                  "provider": "youtube", "videoId": "{{it.videoId}}", "startSec": "{{it.positionSec}}",
+                  "goalId": "{{goal.id}}", "itemId": "{{it.id}}", "embeddable": "{{it.embeddable}}" } } },
+              { "type": "checklist_item", "visible": "{{it.isTask}}", "label": "{{it.title}}", "sublabel": "{{it.sub}}", "checked": "{{it.done}}",
+                "action": { "type": "toggle_done", "params": { "goalId": "{{goal.id}}", "itemId": "{{it.id}}" } } }
+            ]}
+          }}
+        }
+      ]
+    },
+    "tile_wide": {
+      "type": "card", "accent": "{{goal.accent}}",
+      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
+      "child": { "type": "column", "gap": 12, "children": [
+        { "type": "row", "gap": 12, "children": [
+          { "type": "progress_ring", "value": "{{state.progress}}", "size": 56, "stroke": 6, "label": "{{state.pctLabel}}" },
+          { "type": "column", "gap": 2, "expand": true, "children": [
+            { "type": "text", "style": "subtitle", "value": "{{goal.title}}", "maxLines": 1 },
+            { "type": "text", "style": "caption", "visible": "{{state.hasNext}}", "value": "Next: {{state.next.title}}", "maxLines": 1 },
+            { "type": "text", "style": "caption", "value": "{{state.progressLabel}}" }
+          ]},
+          { "type": "badge", "visible": "{{state.todayComplete}}", "label": "✓ Today", "tone": "success" }
+        ]},
+        { "type": "row", "gap": 8, "visible": "{{state.next.isVideo}}", "children": [
+          { "type": "button", "variant": "tonal", "label": "▶ {{state.next.resumeLabel}}", "expand": true,
+            "action": { "type": "open_video", "params": {
+              "provider": "youtube", "videoId": "{{state.next.videoId}}", "startSec": "{{state.next.positionSec}}",
+              "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}", "embeddable": "{{state.next.embeddable}}" } } }
+        ]}
+      ]}
+    },
+    "tile": {
+      "type": "card", "style": "tile", "accent": "{{goal.accent}}",
+      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
+      "child": { "type": "column", "gap": 6, "align": "center", "children": [
+        { "type": "progress_ring", "value": "{{state.progress}}", "size": 64, "stroke": 7, "label": "{{state.pctLabel}}" },
+        { "type": "text", "style": "caption", "value": "{{state.next.title}}", "maxLines": 1 }
+      ]}
+    }
+  }
+}

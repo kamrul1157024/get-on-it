@@ -1,0 +1,17 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "no-sugary-drinks",
+  "template": "habit@1",
+  "title": "No sugary drinks",
+  "accent": "#4caf7d",
+  "icon": "🚫",
+  "reminders": {
+    "preset": "gentle",
+    "time": "20:00"
+  },
+  "data": {
+    "mode": "check",
+    "avoid": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "atomic-habits",
+  "template": "book@1",
+  "title": "Read Atomic Habits",
+  "accent": "#5aa9e6",
+  "icon": "📖",
+  "reminders": { "preset": "gentle", "time": "21:30" },
+  "data": {
+    "book": { "title": "Atomic Habits", "author": "James Clear" },
+    "source": { "kind": "physical" },
+    "pages": { "start": 1, "end": 320, "perDay": 2 }
+  }
+}

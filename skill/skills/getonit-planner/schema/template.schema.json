@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://getonit.invalid/schema/template.schema.json",
+  "title": "Get On It template document",
+  "description": "A UI template, a data schema, and a progress engine. Only the components, actions, and engines in the app's capability manifest are allowed.",
+  "allOf": [
+    { "required": ["schemaVersion"] },
+    { "$ref": "#/$defs/template" }
+  ],
+  "$defs": {
+    "template": {
+      "type": "object",
+      "required": ["kind", "id", "version", "engine", "surfaces"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "template" },
+        "schemaVersion": { "type": "string", "pattern": "^1\\.\\d+$" },
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "engine": { "enum": ["video_series", "page_range", "count", "check", "checklist", "by_mode"] },
+        "dataSchema": { "type": "object" },
+        "surfaces": {
+          "type": "object",
+          "required": ["screen"],
+          "additionalProperties": false,
+          "properties": {
+            "screen": { "$ref": "#/$defs/node" },
+            "tile": { "$ref": "#/$defs/node" },
+            "tile_wide": { "$ref": "#/$defs/node" }
+          }
+        }
+      }
+    },
+    "link": {
+      "type": "string",
+      "pattern": "^(https://|\\{\\{)"
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["open_goal", "open_video", "open_external", "open_pdf_page", "link_file", "mark_done", "toggle_done", "log_progress", "notify"]
+        },
+        "params": {
+          "type": "object",
+          "properties": { "url": { "$ref": "#/$defs/link" } }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "src": { "$ref": "#/$defs/link" },
+        "url": { "$ref": "#/$defs/link" },
+        "action": { "$ref": "#/$defs/action" },
+        "increment": { "$ref": "#/$defs/action" },
+        "decrement": { "$ref": "#/$defs/action" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "child": { "$ref": "#/$defs/node" },
+        "item": { "$ref": "#/$defs/node" },
+        "fallback": { "$ref": "#/$defs/node" }
+      },
+      "if": { "not": { "required": ["fallback"] } },
+      "then": {
+        "properties": {
+          "type": {
+            "enum": [
+              "column", "row", "card", "grid", "list", "section", "divider", "spacer",
+              "text", "icon", "image", "badge", "stat", "progress_bar", "progress_ring",
+              "week_dots", "heatmap", "media",
+              "button", "checklist_item", "counter", "number_input",
+              "embed"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "getonit-planner",
+  "version": "1.0.0",
+  "description": "Turns a goal (finish a YouTube course, read a book, build a habit) into a validated plan file that the Get On It Android app imports.",
+  "author": { "name": "Kamrul Hassan" },
+  "repository": "https://github.com/kamrul1157024/get-on-it",
+  "keywords": ["get-on-it", "planner", "goals", "habits", "courses"]
+}

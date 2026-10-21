@@ -1,0 +1,118 @@
+{
+  "kind": "template",
+  "schemaVersion": "1.0",
+  "id": "book",
+  "version": "1.1.0",
+  "title": "Book Read",
+  "engine": "page_range",
+  "dataSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["book", "pages"],
+    "properties": {
+      "book": {
+        "type": "object",
+        "required": ["title"],
+        "properties": { "title": { "type": "string", "minLength": 1 }, "author": { "type": "string" } }
+      },
+      "source": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "enum": ["local_file", "drive_file", "url", "physical"] },
+          "url": { "type": "string", "pattern": "^https://" }
+        },
+        "if": { "properties": { "kind": { "const": "url" } } },
+        "then": { "required": ["url"] }
+      },
+      "pages": {
+        "type": "object",
+        "required": ["start", "end"],
+        "properties": {
+          "start": { "type": "integer", "minimum": 1 },
+          "end": { "type": "integer", "minimum": 1 },
+          "perDay": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  },
+  "surfaces": {
+    "screen": {
+      "type": "column", "gap": 16, "children": [
+        {
+          "type": "card", "id": "today-pages",
+          "child": { "type": "row", "gap": 14, "align": "top", "children": [
+            { "type": "media", "kind": "pdf_page", "width": 92, "height": 124, "page": "{{state.today.startPage}}" },
+            { "type": "column", "gap": 8, "expand": true, "children": [
+              { "type": "text", "style": "label", "value": "Today's reading" },
+              { "type": "column", "children": [
+                { "type": "text", "style": "title", "value": "{{state.book.title}}" },
+                { "type": "text", "style": "caption", "visible": "{{state.book.author}}", "value": "{{state.book.author}}" }
+              ]},
+              { "type": "row", "gap": 6, "children": [
+                { "type": "badge", "label": "{{state.today.label}}", "tone": "neutral" },
+                { "type": "badge", "label": "🔥 {{state.streakLabel}}", "tone": "warning" }
+              ]},
+              { "type": "progress_bar", "value": "{{state.progress}}" },
+              { "type": "text", "style": "caption", "value": "{{state.progressLabel}} · {{state.finishLabel}}" }
+            ]}
+          ]}
+        },
+        {
+          "type": "column", "gap": 8, "children": [
+            { "type": "button", "variant": "filled", "full": true, "visible": "{{state.canOpen}}",
+              "label": "📖 Read {{state.today.label}}",
+              "action": { "type": "open_pdf_page", "params": { "documentId": "{{goal.id}}", "page": "{{state.today.startPage}}" } } },
+            { "type": "button", "variant": "filled", "full": true, "visible": "{{state.needsFile}}", "label": "Select the PDF",
+              "action": { "type": "link_file", "params": { "goalId": "{{goal.id}}", "documentId": "{{goal.id}}" } } },
+            { "type": "number_input", "id": "page-reached", "visible": "{{state.isPhysical}}", "label": "Page reached",
+              "hint": "Next page: {{state.nextPage}}",
+              "action": { "type": "log_progress", "params": { "goalId": "{{goal.id}}" } } },
+            { "type": "button", "variant": "tonal", "full": true, "visible": "{{state.todayPending}}", "label": "Mark today done",
+              "action": { "type": "mark_done", "params": { "goalId": "{{goal.id}}", "scope": "today" } } },
+            { "type": "badge", "visible": "{{state.todayComplete}}", "label": "✓ Done today", "tone": "success" }
+          ]
+        },
+        {
+          "type": "card", "id": "book-stats",
+          "child": { "type": "column", "gap": 14, "children": [
+            { "type": "row", "align": "between", "children": [
+              { "type": "stat", "value": "{{state.perDayLabel}}", "label": "Pace" },
+              { "type": "stat", "value": "{{state.streakLabel}}", "label": "Streak" },
+              { "type": "stat", "visible": "{{goal.deadline}}", "value": "{{state.deadlineLabel}}", "label": "Until deadline" }
+            ]},
+            { "type": "week_dots", "days": "{{state.week}}" }
+          ]}
+        },
+        { "type": "section", "title": "Last 12 weeks", "child": { "type": "heatmap", "cells": "{{state.heatmap}}" } }
+      ]
+    },
+    "tile_wide": {
+      "type": "card", "accent": "{{goal.accent}}",
+      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
+      "child": { "type": "row", "gap": 12, "children": [
+        { "type": "media", "kind": "pdf_page", "width": 48, "height": 66, "page": "{{state.today.startPage}}" },
+        { "type": "column", "gap": 2, "expand": true, "children": [
+          { "type": "text", "style": "label", "value": "Read today" },
+          { "type": "text", "style": "subtitle", "value": "{{state.today.label}}" },
+          { "type": "text", "style": "caption", "value": "{{goal.title}} · {{state.progressLabel}}", "maxLines": 1 }
+        ]},
+        { "type": "badge", "visible": "{{state.todayComplete}}", "label": "✓ Today", "tone": "success" },
+        { "type": "button", "variant": "tonal", "visible": "{{state.canOpen}}", "label": "Read",
+          "action": { "type": "open_pdf_page", "params": { "documentId": "{{goal.id}}", "page": "{{state.today.startPage}}" } } }
+      ]}
+    },
+    "tile": {
+      "type": "card", "style": "tile", "accent": "{{goal.accent}}",
+      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
+      "child": { "type": "row", "gap": 10, "children": [
+        { "type": "media", "kind": "pdf_page", "width": 48, "height": 66, "page": "{{state.today.startPage}}" },
+        { "type": "column", "gap": 2, "expand": true, "children": [
+          { "type": "text", "style": "label", "value": "Read" },
+          { "type": "text", "style": "subtitle", "value": "{{state.today.label}}" },
+          { "type": "text", "style": "caption", "value": "🔥 {{state.streak}}" }
+        ]}
+      ]}
+    }
+  }
+}

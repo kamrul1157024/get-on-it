@@ -1,0 +1,10 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "meditate",
+  "template": "habit@1",
+  "title": "Meditate 10 min",
+  "accent": "#4caf7d",
+  "icon": "🧘",
+  "data": { "mode": "check" }
+}
