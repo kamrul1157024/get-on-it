@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:getonit/features/player/video_backend.dart';
+
 import 'app_harness.dart';
 
 /// User flows shared by the host widget tests (test/app_flow_test.dart) and
@@ -209,6 +211,14 @@ Future<void> playerFlow(WidgetTester tester, Fakes fakes) async {
 
   await _tapIn(tester, 'stanford-cs229', find.text('▶ Resume 2:00'));
   expect(fakes.video.startSec, 120);
+
+  // The owner does not allow the video in other apps: explain and offer YouTube.
+  fakes.video.fail(VideoProblem.notEmbeddable);
+  await settle(tester);
+  expect(find.byKey(const ValueKey('player-problem:notEmbeddable')), findsOneWidget);
+  expect(find.byKey(ValueKey('fake-player:${fakes.video.videoId}')), findsNothing);
+  await tapKey(tester, 'player-problem-youtube');
+  expect(fakes.launched.last.toString(), 'https://www.youtube.com/watch?v=jGwO_UgTS7I&t=120s');
   await tapKey(tester, 'player-mark-done');
   expect(find.text('Done'), findsOneWidget);
   await goBack(tester);

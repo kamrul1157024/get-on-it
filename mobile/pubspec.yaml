@@ -47,6 +47,7 @@ dependencies:
   pdfrx: ^2.9.0
   url_launcher: ^6.3.3
   file_picker: ^13.1.0
+  async: ^2.13.1
 
 dev_dependencies:
   flutter_test:

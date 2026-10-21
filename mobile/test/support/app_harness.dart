@@ -29,10 +29,12 @@ class FakeVideo implements VideoBackend {
   final int startSec;
   final _positions = StreamController<double>.broadcast();
   final _stops = StreamController<void>.broadcast();
+  final _problems = StreamController<VideoProblem>.broadcast();
   bool disposed = false;
 
   void play(double sec) => _positions.add(sec);
   void pause() => _stops.add(null);
+  void fail(VideoProblem p) => _problems.add(p);
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -46,6 +48,9 @@ class FakeVideo implements VideoBackend {
 
   @override
   Stream<void> get stops => _stops.stream;
+
+  @override
+  Stream<VideoProblem> get problems => _problems.stream;
 
   @override
   void dispose() => disposed = true;

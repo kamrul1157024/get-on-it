@@ -32,6 +32,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   late final DateTime Function() _clock;
   StreamSubscription<double>? _positions;
   StreamSubscription<void>? _stops;
+  StreamSubscription<VideoProblem>? _problems;
+  VideoProblem? _problem;
   double _position = 0;
   double _lastSaved = -1;
   DateTime? _lastSavedAt;
@@ -50,6 +52,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       if (last == null || _clock().difference(last).inSeconds >= 15) _save();
     });
     _stops = _backend.stops.listen((_) => _save());
+    _problems = _backend.problems.listen((p) {
+      if (mounted) setState(() => _problem = p);
+    });
   }
 
   void _save() {
@@ -65,9 +70,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _save();
     _positions?.cancel();
     _stops?.cancel();
+    _problems?.cancel();
     _backend.dispose();
     super.dispose();
   }
+
+  void _openYoutube() => ref.read(externalLauncherProvider)(
+    Uri.parse('https://www.youtube.com/watch?v=${widget.videoId}&t=${_position.round()}s'),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +93,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         appBar: AppBar(title: Text(item?['title'] as String? ?? view?.goal.title ?? 'Video')),
         body: ListView(
           children: [
-            _backend.build(context),
+            if (_problem == null) _backend.build(context) else _ProblemCard(problem: _problem!, onWatch: _openYoutube),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -111,9 +121,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
                         key: const ValueKey('player-youtube'),
-                        onPressed: () => ref.read(externalLauncherProvider)(
-                          Uri.parse('https://www.youtube.com/watch?v=${widget.videoId}&t=${_position.round()}s'),
-                        ),
+                        onPressed: _openYoutube,
                         icon: const Icon(Icons.open_in_new),
                         label: const Text('YouTube'),
                       ),
@@ -124,6 +132,48 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown instead of the player when the video cannot play in the app.
+class _ProblemCard extends StatelessWidget {
+  const _ProblemCard({required this.problem, required this.onWatch});
+
+  final VideoProblem problem;
+  final VoidCallback onWatch;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = switch (problem) {
+      VideoProblem.notEmbeddable =>
+        'The owner does not allow this video in other apps. Watch it on YouTube, then come back and tap Mark done.',
+      VideoProblem.notFound =>
+        'This video is not available. It may be private or removed. Ask Claude to check the video ID.',
+      VideoProblem.failed => 'The video did not load. Check your connection, or watch it on YouTube.',
+    };
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: ValueKey('player-problem:${problem.name}'),
+      color: scheme.surfaceContainerHighest,
+      padding: const EdgeInsets.all(24),
+      constraints: const BoxConstraints(minHeight: 220),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.ondemand_video_outlined, size: 40, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            key: const ValueKey('player-problem-youtube'),
+            onPressed: onWatch,
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Watch on YouTube'),
+          ),
+        ],
       ),
     );
   }

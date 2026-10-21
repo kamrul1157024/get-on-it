@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:async/async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
@@ -14,7 +17,21 @@ abstract class VideoBackend {
   /// Fires when playback pauses or ends.
   Stream<void> get stops;
 
+  /// Fires when the video cannot play here, with a reason for the user.
+  Stream<VideoProblem> get problems;
+
   void dispose();
+}
+
+enum VideoProblem {
+  /// The owner does not allow the video in other apps (YouTube 101/150/152).
+  notEmbeddable,
+
+  /// Removed, private, or the ID is wrong (YouTube 100/105).
+  notFound,
+
+  /// Anything else, including a player that never loaded.
+  failed,
 }
 
 final videoBackendProvider = Provider<VideoBackend Function(String videoId, int startSec)>(
@@ -34,10 +51,12 @@ class YoutubeBackend implements VideoBackend {
     // player screen still works then.
     _controller.loadVideoById(videoId: videoId, startSeconds: startSec.toDouble()).catchError((Object e) {
       debugPrint('YouTube player did not load $videoId: $e');
+      if (!_failed.isClosed) _failed.add(VideoProblem.failed);
     });
   }
 
   final YoutubePlayerController _controller;
+  final _failed = StreamController<VideoProblem>.broadcast();
 
   @override
   Widget build(BuildContext context) => YoutubePlayer(controller: _controller, aspectRatio: 16 / 9);
@@ -51,5 +70,24 @@ class YoutubeBackend implements VideoBackend {
       .map((_) {});
 
   @override
-  void dispose() => _controller.close();
+  Stream<VideoProblem> get problems => StreamGroup.merge([
+    _failed.stream,
+    _controller.stream
+        .where((v) => v.hasError)
+        .map(
+          (v) => switch (v.error) {
+            YoutubeError.notEmbeddable ||
+            YoutubeError.sameAsNotEmbeddable ||
+            YoutubeError.sameAsNotEmbeddable2 => VideoProblem.notEmbeddable,
+            YoutubeError.videoNotFound || YoutubeError.cannotFindVideo => VideoProblem.notFound,
+            _ => VideoProblem.failed,
+          },
+        ),
+  ]);
+
+  @override
+  void dispose() {
+    _failed.close();
+    _controller.close();
+  }
 }
