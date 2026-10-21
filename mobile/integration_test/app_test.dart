@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdfrx/pdfrx.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../test/support/app_harness.dart';
 import '../test/support/flows.dart';
@@ -15,18 +17,65 @@ import '../test/support/flows.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> start(WidgetTester tester, {Future<String?> Function(String)? pdfPicker}) async {
+  Future<Fakes> start(
+    WidgetTester tester, {
+    Future<String?> Function(String)? pdfPicker,
+    bool realPlayer = false,
+  }) async {
     rootBundle.clear();
     final db = memoryDatabase();
     addTearDown(db.close);
-    await tester.pumpWidget(buildTestApp(db: db, pdfPicker: pdfPicker));
+    final fakes = Fakes();
+    await tester.pumpWidget(buildTestApp(db: db, pdfPicker: pdfPicker, fakes: realPlayer ? null : fakes));
     await waitFor(tester, find.text('No goals yet'));
+    return fakes;
   }
 
   Future<void> stop(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 500));
   }
+
+  Future<void> run(WidgetTester tester, Future<void> Function(Fakes) flow) async {
+    final fakes = await start(tester);
+    await flow(fakes);
+    await stop(tester);
+  }
+
+  testWidgets('player: resume, save positions, YouTube link, mark done', (tester) async {
+    await run(tester, (f) => playerFlow(tester, f));
+  });
+
+  testWidgets('course screen: lecture list, task toggle, open task, delete', (tester) async {
+    await run(tester, (f) => courseScreenFlow(tester, f));
+  });
+
+  testWidgets('book: mark today done', (tester) async {
+    await run(tester, (_) => bookMarkTodayFlow(tester));
+  });
+
+  testWidgets('habits: check undo, avoid habit, checklist', (tester) async {
+    await run(tester, (_) => moreHabitsFlow(tester));
+  });
+
+  testWidgets('import: paste button and copy errors for Claude', (tester) async {
+    await run(tester, (_) => clipboardFlow(tester));
+  });
+
+  testWidgets('settings: day start and capability manifest', (tester) async {
+    await run(tester, (_) => settingsFlow(tester));
+  });
+
+  testWidgets('the real YouTube player opens', (tester) async {
+    await start(tester, realPlayer: true);
+    await tapKey(tester, 'empty-samples');
+    await tester.tap(find.text('▶ Resume 0:00'));
+    await waitFor(tester, find.text('Lecture 1: Introduction'));
+    expect(find.byType(YoutubePlayer), findsOneWidget);
+    await tester.pageBack();
+    await waitFor(tester, find.text('Get On It'));
+    await stop(tester);
+  });
 
   testWidgets('course: import, open, mark done, re-import keeps progress', (tester) async {
     await start(tester);
@@ -75,22 +124,25 @@ void main() {
     );
     await tapText(tester, 'E2E book · Page 0 of 3');
     await tapText(tester, 'Select the PDF');
-    await tapText(tester, '📖 Read p. 1–2');
+    expect(find.text('📖 Read p. 1–2'), findsOneWidget);
+    await goBack(tester);
 
-    expect(find.text('Today: p. 1–2'), findsOneWidget);
+    // The Read button on the Today tile opens the reader at today's page.
+    final tile = find.byKey(const ValueKey('goal-tile:e2e-book'));
+    await tester.tap(find.descendant(of: tile, matching: find.text('Read')));
+    await waitFor(tester, find.text('Today: p. 1–2'));
     // The reader records a page after 5 seconds on it.
     await waitFor(tester, find.text('Page 1 of 3'), timeout: const Duration(seconds: 30));
+
+    // Turn to page 2: today's pages are complete.
+    await tester.timedDrag(find.byType(PdfViewer), const Offset(0, -500), const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 500));
+    await waitFor(tester, find.text('Page 2 of 3'), timeout: const Duration(seconds: 30));
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
     await goBack(tester);
-    expect(find.text('Page 1 of 3 · Finish ≈ ${_today()}'), findsOneWidget);
+    expect(find.descendant(of: tile, matching: find.text('✓ Today')), findsOneWidget);
     await stop(tester);
   });
-}
-
-String _today() {
-  // 1 page read, 2 left at 2 per day: today is not complete, so it finishes today.
-  final d = DateTime.now();
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return '${d.day} ${months[d.month - 1]}';
 }
 
 /// Pumps with real time passing until [finder] matches.

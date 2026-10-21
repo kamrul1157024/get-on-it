@@ -28,6 +28,13 @@ final pdfPickerProvider = Provider<Future<String?> Function(String goalId)>(
   },
 );
 
+/// Opens a link in another app. Tests replace it, because the real one leaves
+/// the app.
+final externalLauncherProvider = Provider<Future<void> Function(Uri url)>(
+  (ref) =>
+      (url) => launchUrl(url, mode: LaunchMode.externalApplication),
+);
+
 /// Maps action types to handlers. Spec §8.
 class ActionRouter {
   ActionRouter(this.context, this.ref);
@@ -61,7 +68,7 @@ class ActionRouter {
       case 'open_external':
         final url = Uri.tryParse(params['url'] as String? ?? '');
         if (url != null && (url.scheme == 'https' || url.scheme == 'vnd.youtube')) {
-          await launchUrl(url, mode: LaunchMode.externalApplication);
+          await ref.read(externalLauncherProvider)(url);
         }
       case 'link_file':
         final id = (params['documentId'] ?? goalId) as String?;

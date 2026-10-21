@@ -60,13 +60,12 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Says plainly whether this runner can accelerate the emulator, rather
-      # than leaving a silent boot timeout to explain it.
-      - name: Check emulator acceleration
+      # The emulator's data partition needs ~7 GB, more than a runner has
+      # free; these toolchains are never used here.
+      - name: Free disk space
         run: |
-          nproc; free -h | head -2
-          ls -l /dev/kvm || true
-          "$ANDROID_HOME/emulator/emulator" -accel-check || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
 
       - uses: actions/setup-java@v4
         with:
@@ -89,6 +88,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          disk-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           working-directory: mobile

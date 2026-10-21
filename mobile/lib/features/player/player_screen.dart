@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
+import '../../actions/action_router.dart';
 import '../../app/providers.dart';
 import '../../core/events/goal_event.dart';
+import '../../data/repository.dart';
 import '../../render/components.dart';
+import 'video_backend.dart';
 
 /// Plays one video and records the position. Spec §7.8: every 15 seconds
 /// of playback, on pause, and when the screen closes.
@@ -24,49 +25,47 @@ class PlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
-  late final YoutubePlayerController _controller;
-  StreamSubscription<YoutubeVideoState>? _positions;
-  StreamSubscription<YoutubePlayerValue>? _states;
+  late final VideoBackend _backend;
+  // Kept from initState: `ref` may not be used in dispose, where the last
+  // position is saved.
+  late final Repository _repo;
+  late final DateTime Function() _clock;
+  StreamSubscription<double>? _positions;
+  StreamSubscription<void>? _stops;
   double _position = 0;
   double _lastSaved = -1;
-  DateTime _lastSavedAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime? _lastSavedAt;
 
   @override
   void initState() {
     super.initState();
+    _repo = ref.read(repositoryProvider);
+    _clock = ref.read(wallClockProvider);
     _position = widget.startSec.toDouble();
-    _controller = YoutubePlayerController.fromVideoId(
-      videoId: widget.videoId,
-      autoPlay: true,
-      startSeconds: widget.startSec.toDouble(),
-      params: const YoutubePlayerParams(showFullscreenButton: true, strictRelatedVideos: true),
-    );
-    _positions = _controller.videoStateStream.listen((s) {
-      _position = s.position.inMilliseconds / 1000;
-      if (DateTime.now().difference(_lastSavedAt).inSeconds >= 15) _save();
+    _lastSaved = _position;
+    _backend = ref.read(videoBackendProvider)(widget.videoId, widget.startSec);
+    _positions = _backend.positions.listen((sec) {
+      _position = sec;
+      final last = _lastSavedAt;
+      if (last == null || _clock().difference(last).inSeconds >= 15) _save();
     });
-    _states = _controller.stream.listen((v) {
-      if (v.playerState == PlayerState.paused || v.playerState == PlayerState.ended) _save();
-    });
+    _stops = _backend.stops.listen((_) => _save());
   }
 
   void _save() {
     final item = widget.itemId;
     if (item == null || (_position - _lastSaved).abs() < 1) return;
     _lastSaved = _position;
-    _lastSavedAt = DateTime.now();
-    ref.read(repositoryProvider).addEvent(widget.goalId, EventType.itemPosition, {
-      'item': item,
-      'sec': _position.round(),
-    });
+    _lastSavedAt = _clock();
+    _repo.addEvent(widget.goalId, EventType.itemPosition, {'item': item, 'sec': _position.round()});
   }
 
   @override
   void dispose() {
     _save();
     _positions?.cancel();
-    _states?.cancel();
-    _controller.close();
+    _stops?.cancel();
+    _backend.dispose();
     super.dispose();
   }
 
@@ -84,7 +83,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         appBar: AppBar(title: Text(item?['title'] as String? ?? view?.goal.title ?? 'Video')),
         body: ListView(
           children: [
-            YoutubePlayer(controller: _controller, aspectRatio: 16 / 9),
+            _backend.build(context),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -98,23 +97,22 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     children: [
                       Expanded(
                         child: FilledButton.icon(
+                          key: const ValueKey('player-mark-done'),
                           onPressed: widget.itemId == null || item?['done'] == true
                               ? null
-                              : () {
-                                  ref.read(repositoryProvider).addEvent(widget.goalId, EventType.itemDone, {
-                                    'item': widget.itemId,
-                                    'done': true,
-                                  });
-                                },
+                              : () => _repo.addEvent(widget.goalId, EventType.itemDone, {
+                                  'item': widget.itemId,
+                                  'done': true,
+                                }),
                           icon: const Icon(Icons.check),
                           label: Text(item?['done'] == true ? 'Done' : 'Mark done'),
                         ),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
-                        onPressed: () => launchUrl(
+                        key: const ValueKey('player-youtube'),
+                        onPressed: () => ref.read(externalLauncherProvider)(
                           Uri.parse('https://www.youtube.com/watch?v=${widget.videoId}&t=${_position.round()}s'),
-                          mode: LaunchMode.externalApplication,
                         ),
                         icon: const Icon(Icons.open_in_new),
                         label: const Text('YouTube'),
