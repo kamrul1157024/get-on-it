@@ -78,8 +78,24 @@ void main() {
     await run(tester, (_) => settingsFlow(tester));
   });
 
+  testWidgets('drive: connect, back up, auto backup, restore, delete, disconnect', (tester) async {
+    await run(
+      tester,
+      (f) => driveFlow(
+        tester,
+        f,
+        waitAutoBackup: () async {
+          await tester.pump(const Duration(seconds: 3));
+          await settle(tester);
+        },
+      ),
+    );
+  });
+
   testWidgets('a shared plan opens the import preview', (tester) async {
     const channel = MethodChannel('app.getonit/intents');
+    // Read before start(), so the asset cache from the last test must go first.
+    rootBundle.clear();
     final json = await sampleText('habit-water.getonit.json');
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       channel,

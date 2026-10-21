@@ -1,0 +1,16 @@
+{
+  "name": "get-on-it",
+  "owner": { "name": "Kamrul Hassan" },
+  "metadata": {
+    "description": "Claude plugins for the Get On It app."
+  },
+  "plugins": [
+    {
+      "name": "getonit-planner",
+      "source": "./skill",
+      "description": "Makes Get On It plan files for courses, books, and habits.",
+      "version": "1.0.0",
+      "author": { "name": "Kamrul Hassan" }
+    }
+  ]
+}

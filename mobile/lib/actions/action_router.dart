@@ -53,6 +53,12 @@ class ActionRouter {
       case 'open_video':
         final videoId = params['videoId'] as String?;
         if (videoId == null || goalId == null) return;
+        if (params['embeddable'] == false) {
+          final start = asNum(params['startSec'])?.toInt() ?? 0;
+          await ref.read(externalLauncherProvider)(Uri.parse('https://www.youtube.com/watch?v=$videoId&t=${start}s'));
+          _snack('This video plays on YouTube. Come back and tap Mark done when you finish.');
+          return;
+        }
         _push(
           PlayerScreen(
             goalId: goalId,

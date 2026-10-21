@@ -66,9 +66,26 @@ void main() {
     await run(tester, (_) => settingsFlow(tester));
   });
 
+  testWidgets('drive: connect, back up, auto backup, restore, delete, disconnect', (tester) async {
+    await run(
+      tester,
+      (f) => driveFlow(
+        tester,
+        f,
+        waitAutoBackup: () async {
+          final end = DateTime.now().add(const Duration(seconds: 10));
+          while (DateTime.now().isBefore(end)) {
+            await tester.pump(const Duration(milliseconds: 200));
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+          }
+        },
+      ),
+    );
+  });
+
   testWidgets('the real YouTube player opens', (tester) async {
     await start(tester, realPlayer: true);
-    await tapKey(tester, 'empty-samples');
+    await importPlan(tester, await embeddableCourse());
     await tester.tap(find.text('▶ Resume 0:00'));
     await waitFor(tester, find.text('Lecture 1: Introduction'));
     expect(find.byType(YoutubePlayer), findsOneWidget);

@@ -44,6 +44,22 @@ class GoalEvent {
     return c != 0 ? c : a.id.compareTo(b.id);
   }
 
+  static const _envelope = {'id', 't', 'tz', 'goal', 'event', 'device'};
+
+  /// Reads one line of a backed-up event log (spec §13.2).
+  factory GoalEvent.fromJson(Map<String, Object?> j) => GoalEvent(
+    id: j['id'] as String,
+    goalId: j['goal'] as String,
+    type: j['event'] as String,
+    payload: {
+      for (final e in j.entries)
+        if (!_envelope.contains(e.key)) e.key: e.value,
+    },
+    utcMs: DateTime.parse(j['t'] as String).millisecondsSinceEpoch,
+    offsetMinutes: (j['tz'] as num?)?.toInt() ?? 0,
+    device: (j['device'] as String?) ?? 'local',
+  );
+
   Map<String, Object?> toJson() => {
     'id': id,
     't': DateTime.fromMillisecondsSinceEpoch(utcMs, isUtc: true).toIso8601String(),

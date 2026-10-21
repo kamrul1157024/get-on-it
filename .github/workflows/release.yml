@@ -119,6 +119,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEYSTORE_PATH: getonit-release.jks
+          # Optional: without it, Drive backup shows "not set up" (docs/drive.md).
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
         run: make apk-release
 
       - uses: actions/upload-artifact@v4

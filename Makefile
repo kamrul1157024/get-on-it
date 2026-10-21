@@ -41,7 +41,8 @@ apk-release:
 	cd $(MOBILE) && flutter build apk --release \
 		--build-name=$(VERSION) \
 		--build-number=$(shell git rev-list --count HEAD) \
-		--dart-define=APP_VERSION=$(VERSION)
+		--dart-define=APP_VERSION=$(VERSION) \
+		--dart-define=GOOGLE_SERVER_CLIENT_ID=$(GOOGLE_SERVER_CLIENT_ID)
 
 ## release-publish  Create the GitHub release v$(VERSION) from what is staged in dist/
 release-publish:

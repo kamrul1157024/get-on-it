@@ -1,0 +1,515 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://getonit.invalid/schema/goal.schema.json",
+  "title": "Get On It goal document",
+  "description": "A goal: a template reference and data. The parts under $defs/goal/allOf and $defs/data-* are generated from templates/*.json by scripts/sync_schemas.py.",
+  "allOf": [
+    {
+      "required": [
+        "schemaVersion"
+      ]
+    },
+    {
+      "$ref": "#/$defs/goal"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    "weekdays": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ]
+      }
+    },
+    "reminders": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "enum": [
+            "gentle",
+            "firm",
+            "strict"
+          ]
+        },
+        "time": {
+          "$ref": "#/$defs/time"
+        },
+        "days": {
+          "$ref": "#/$defs/weekdays"
+        },
+        "ladder": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "level"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/time"
+              },
+              "level": {
+                "enum": [
+                  "notification",
+                  "sticky",
+                  "alarm",
+                  "strict_alarm"
+                ]
+              },
+              "maxSnoozes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "snoozeMin": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "dismiss": {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "do_task",
+                      "start_task"
+                    ]
+                  },
+                  "minProgress": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "stopWhen": {
+          "const": "today_complete"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "preset",
+            "time"
+          ]
+        },
+        {
+          "required": [
+            "ladder"
+          ]
+        }
+      ]
+    },
+    "goal": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "template",
+        "title",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "goal"
+        },
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^1\\.\\d+$"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "template": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,63}@\\d+$"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "icon": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startDate": {
+          "$ref": "#/$defs/date"
+        },
+        "deadline": {
+          "$ref": "#/$defs/date"
+        },
+        "schedule": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "days": {
+              "$ref": "#/$defs/weekdays",
+              "minItems": 1
+            }
+          }
+        },
+        "reminders": {
+          "$ref": "#/$defs/reminders"
+        },
+        "nudges": {
+          "type": "object",
+          "properties": {
+            "suggestedApps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "template": {
+                "const": "book@1"
+              }
+            },
+            "required": [
+              "template"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/data-book-1"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "template": {
+                "const": "course@1"
+              }
+            },
+            "required": [
+              "template"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/data-course-1"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "template": {
+                "const": "habit@1"
+              }
+            },
+            "required": [
+              "template"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/data-habit-1"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "data-book-1": {
+      "type": "object",
+      "required": [
+        "book",
+        "pages"
+      ],
+      "properties": {
+        "book": {
+          "type": "object",
+          "required": [
+            "title"
+          ],
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "author": {
+              "type": "string"
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "local_file",
+                "drive_file",
+                "url",
+                "physical"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "pattern": "^https://"
+            }
+          },
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "url"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "url"
+            ]
+          }
+        },
+        "pages": {
+          "type": "object",
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "perDay": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "data-course-1": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "youtube"
+          ]
+        },
+        "playlistUrl": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "completionThreshold": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "dailyTargetMinutes": {
+          "type": "number",
+          "minimum": 1
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "kind": {
+                "enum": [
+                  "video",
+                  "task"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "videoId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{6,20}$"
+              },
+              "durationSec": {
+                "type": "number",
+                "minimum": 1
+              },
+              "week": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "embeddable": {
+                "type": "boolean"
+              }
+            },
+            "if": {
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "task"
+                }
+              }
+            },
+            "then": {},
+            "else": {
+              "required": [
+                "videoId",
+                "durationSec"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "data-habit-1": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "count",
+            "check",
+            "checklist"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "target": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "period": {
+          "enum": [
+            "day",
+            "week"
+          ]
+        },
+        "avoid": {
+          "type": "boolean"
+        },
+        "resets": {
+          "enum": [
+            "daily",
+            "never"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "count"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "target"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "checklist"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "steps"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -10,6 +10,9 @@ import 'package:getonit/actions/action_router.dart';
 import 'package:getonit/app/app.dart';
 import 'package:getonit/app/providers.dart';
 import 'package:getonit/data/database.dart';
+import 'package:getonit/features/drive/drive_account.dart';
+import 'package:getonit/features/drive/drive_controller.dart';
+import 'package:getonit/features/drive/remote_store.dart';
 import 'package:getonit/features/player/video_backend.dart';
 
 /// A controllable clock shared by the app and the test.
@@ -56,10 +59,32 @@ class FakeVideo implements VideoBackend {
   void dispose() => disposed = true;
 }
 
+/// A Google account whose Drive is a [MemoryStore].
+class FakeDriveAccount implements DriveAccount {
+  FakeDriveAccount(this.store);
+
+  final MemoryStore store;
+  bool signedIn = false;
+
+  @override
+  Future<DriveConnection?> restore() async => signedIn ? DriveConnection('test@example.com', store) : null;
+
+  @override
+  Future<DriveConnection> connect() async {
+    signedIn = true;
+    return DriveConnection('test@example.com', store);
+  }
+
+  @override
+  Future<void> disconnect() async => signedIn = false;
+}
+
 /// Records what the app did outside itself.
 class Fakes {
   final launched = <Uri>[];
   final videos = <FakeVideo>[];
+  final drive = MemoryStore();
+  late final driveAccount = FakeDriveAccount(drive);
 
   FakeVideo get video => videos.last;
 }
@@ -79,6 +104,8 @@ Widget buildTestApp({
     if (pdfPicker != null) pdfPickerProvider.overrideWithValue(pdfPicker),
     if (fakes != null) ...[
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
+      driveAccountProvider.overrideWithValue(fakes.driveAccount),
+      autoBackupDelayProvider.overrideWithValue(const Duration(seconds: 2)),
       videoBackendProvider.overrideWithValue((id, start) {
         final v = FakeVideo(id, start);
         fakes.videos.add(v);

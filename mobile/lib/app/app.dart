@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/drive/drive_controller.dart';
 import '../features/import/import_screen.dart';
 import '../features/intents/incoming.dart';
 import '../features/today/today_screen.dart';
@@ -45,6 +46,8 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // A new day may have started while the app was in the background.
     if (state == AppLifecycleState.resumed) ref.read(currentDayProvider.notifier).refresh();
+    // A change that waits for the automatic backup goes up now.
+    if (state == AppLifecycleState.paused) ref.read(driveProvider.notifier).flush();
   }
 
   /// Shared or opened JSON goes to the import screen. Links are routes.

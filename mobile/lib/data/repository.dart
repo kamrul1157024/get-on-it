@@ -208,6 +208,59 @@ class Repository {
     return e;
   }
 
+  Future<List<GoalEvent>> allEvents() async => [
+    for (final r in await db.select(db.events).get())
+      GoalEvent(
+        id: r.id,
+        goalId: r.goalId,
+        type: r.type,
+        payload: (jsonDecode(r.payload) as Map).cast(),
+        utcMs: r.utcMs,
+        offsetMinutes: r.offsetMinutes,
+        device: r.device,
+      ),
+  ]..sort(GoalEvent.compare);
+
+  /// Adds events from a backup. Events already present (same id) are kept.
+  Future<int> insertEvents(Iterable<GoalEvent> events) => db.transaction(() async {
+    final existing = {for (final r in await db.select(db.events).get()) r.id};
+    var added = 0;
+    for (final e in events) {
+      if (!existing.add(e.id)) continue;
+      await db
+          .into(db.events)
+          .insert(
+            EventsCompanion.insert(
+              id: e.id,
+              goalId: e.goalId,
+              type: e.type,
+              payload: e.payloadJson,
+              utcMs: e.utcMs,
+              offsetMinutes: e.offsetMinutes,
+              device: e.device,
+            ),
+          );
+      added++;
+    }
+    return added;
+  });
+
+  Future<List<GoalDoc>> allGoals() async => [
+    for (final r in await db.select(db.goals).get()) GoalDoc((jsonDecode(r.json) as Map).cast()),
+  ];
+
+  Future<List<TemplateDoc>> importedTemplates() async => [
+    for (final r in await (db.select(db.templates)..where((t) => t.source.equals('imported'))).get())
+      TemplateDoc((jsonDecode(r.json) as Map).cast()),
+  ];
+
+  Future<Map<String, String>> settings() async => {for (final r in await db.select(db.settings).get()) r.key: r.value};
+
+  /// Fires after a goal, event or template changes, so a backup can follow.
+  /// Settings are left out: a backup writes its own time there.
+  Stream<void> get changes =>
+      db.tableUpdates(TableUpdateQuery.onAllTables([db.goals, db.events, db.templates])).map((_) {});
+
   // Files -------------------------------------------------------------------
 
   Stream<Map<String, String>> watchLinkedFiles(String goalId) => (db.select(

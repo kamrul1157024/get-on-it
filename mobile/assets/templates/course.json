@@ -2,7 +2,7 @@
   "kind": "template",
   "schemaVersion": "1.0",
   "id": "course",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "title": "Course Complete",
   "engine": "video_series",
   "dataSchema": {
@@ -26,7 +26,8 @@
             "videoId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{6,20}$" },
             "durationSec": { "type": "number", "minimum": 1 },
             "week": { "type": "integer", "minimum": 1 },
-            "url": { "type": "string", "pattern": "^https://" }
+            "url": { "type": "string", "pattern": "^https://" },
+            "embeddable": { "type": "boolean" }
           },
           "if": { "required": ["kind"], "properties": { "kind": { "const": "task" } } },
           "then": {},
@@ -64,10 +65,10 @@
               { "type": "text", "style": "caption", "value": "{{state.progressLabel}}" }
             ]},
             { "type": "row", "gap": 8, "children": [
-              { "type": "button", "variant": "filled", "label": "▶ Resume", "expand": true, "visible": "{{state.next.isVideo}}",
+              { "type": "button", "variant": "filled", "label": "▶ {{state.next.resumeLabel}}", "expand": true, "visible": "{{state.next.isVideo}}",
                 "action": { "type": "open_video", "params": {
                   "provider": "youtube", "videoId": "{{state.next.videoId}}", "startSec": "{{state.next.positionSec}}",
-                  "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}" } } },
+                  "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}", "embeddable": "{{state.next.embeddable}}" } } },
               { "type": "button", "variant": "filled", "label": "Open task", "expand": true, "visible": "{{state.next.url}}",
                 "action": { "type": "open_external", "params": { "url": "{{state.next.url}}" } } },
               { "type": "button", "variant": "tonal", "label": "Mark done",
@@ -108,7 +109,7 @@
               { "type": "checklist_item", "visible": "{{it.isVideo}}", "label": "{{it.title}}", "sublabel": "{{it.sub}}", "checked": "{{it.done}}",
                 "action": { "type": "open_video", "params": {
                   "provider": "youtube", "videoId": "{{it.videoId}}", "startSec": "{{it.positionSec}}",
-                  "goalId": "{{goal.id}}", "itemId": "{{it.id}}" } } },
+                  "goalId": "{{goal.id}}", "itemId": "{{it.id}}", "embeddable": "{{it.embeddable}}" } } },
               { "type": "checklist_item", "visible": "{{it.isTask}}", "label": "{{it.title}}", "sublabel": "{{it.sub}}", "checked": "{{it.done}}",
                 "action": { "type": "toggle_done", "params": { "goalId": "{{goal.id}}", "itemId": "{{it.id}}" } } }
             ]}
@@ -130,10 +131,10 @@
           { "type": "badge", "visible": "{{state.todayComplete}}", "label": "✓ Today", "tone": "success" }
         ]},
         { "type": "row", "gap": 8, "visible": "{{state.next.isVideo}}", "children": [
-          { "type": "button", "variant": "tonal", "label": "▶ Resume {{state.next.positionLabel}}", "expand": true,
+          { "type": "button", "variant": "tonal", "label": "▶ {{state.next.resumeLabel}}", "expand": true,
             "action": { "type": "open_video", "params": {
               "provider": "youtube", "videoId": "{{state.next.videoId}}", "startSec": "{{state.next.positionSec}}",
-              "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}" } } }
+              "goalId": "{{goal.id}}", "itemId": "{{state.next.id}}", "embeddable": "{{state.next.embeddable}}" } } }
         ]}
       ]}
     },

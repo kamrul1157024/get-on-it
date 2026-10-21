@@ -20,6 +20,16 @@ Future<String> sampleText(String name) async {
   }
 }
 
+/// The sample course with embedding allowed, for tests of the in-app player.
+/// (The real CS229 videos do not allow embedding.)
+Future<String> embeddableCourse() async {
+  final doc = (jsonDecode(await sampleText('course-cs229.getonit.json')) as Map).cast<String, Object?>();
+  for (final item in ((doc['data'] as Map)['items'] as List).cast<Map>()) {
+    item.remove('embeddable');
+  }
+  return jsonEncode(doc);
+}
+
 Future<void> settle(WidgetTester tester) async {
   for (var i = 0; i < 5; i++) {
     await tester.pump(const Duration(milliseconds: 100));
@@ -190,7 +200,7 @@ Future<void> _tapIn(WidgetTester tester, String goalId, Finder f) async {
 /// on close; YouTube button; Resume continues where the user stopped; Mark
 /// done in the player moves the course on.
 Future<void> playerFlow(WidgetTester tester, Fakes fakes) async {
-  await tapKey(tester, 'empty-samples');
+  await importPlan(tester, await embeddableCourse());
   await _tapIn(tester, 'stanford-cs229', find.text('▶ Resume 0:00'));
   expect(find.text('Lecture 1: Introduction'), findsOneWidget, reason: 'player title');
   expect(fakes.video.videoId, 'jGwO_UgTS7I');
@@ -231,9 +241,14 @@ Future<void> courseScreenFlow(WidgetTester tester, Fakes fakes) async {
   await tapKey(tester, 'empty-samples');
   await tapText(tester, 'Stanford CS229: Machine Learning');
 
+  // The owner does not allow these videos in other apps: they open on YouTube.
+  expect(find.text('▶ Watch on YouTube'), findsOneWidget);
   await tapText(tester, 'Lecture 3: Locally Weighted & Logistic Regression');
-  expect(fakes.video.videoId, 'het9HFqo1TQ');
-  await goBack(tester);
+  expect(fakes.videos, isEmpty, reason: 'the in-app player does not open');
+  expect(fakes.launched.last.toString(), 'https://www.youtube.com/watch?v=het9HFqo1TQ&t=0s');
+  expect(find.textContaining('This video plays on YouTube'), findsOneWidget);
+  await tapText(tester, '▶ Watch on YouTube');
+  expect(fakes.launched.last.toString(), 'https://www.youtube.com/watch?v=jGwO_UgTS7I&t=0s');
 
   final task = find.byKey(const ValueKey('check:Problem Set 1'));
   final taskChecked = find.descendant(of: task, matching: find.byIcon(Icons.check));
@@ -365,5 +380,67 @@ Future<void> settingsFlow(WidgetTester tester) async {
   final manifest = jsonDecode((await Clipboard.getData(Clipboard.kTextPlain))!.text!) as Map;
   expect(manifest['components'], contains('progress_ring'));
   expect(manifest['engines'], contains('page_range'));
+  await goBack(tester);
+}
+
+/// Google Drive: connect, back up, automatic backup after a change, delete a
+/// goal and restore it, delete the backup, disconnect.
+Future<void> driveFlow(WidgetTester tester, Fakes fakes, {required Future<void> Function() waitAutoBackup}) async {
+  await tapKey(tester, 'empty-samples');
+  final water = find.byKey(const ValueKey('goal-tile:water'));
+  await tester.ensureVisible(water);
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: water, matching: find.byKey(const ValueKey('counter:increment'))));
+  await settle(tester);
+
+  Future<void> openSettings() async {
+    await tester.tap(find.byTooltip('Settings'));
+    await settle(tester);
+  }
+
+  await openSettings();
+  expect(find.text('Connect Google Drive'), findsOneWidget);
+  await tapKey(tester, 'drive-connect');
+  expect(find.textContaining('Connected as test@example.com'), findsWidgets);
+  await tapKey(tester, 'drive-backup');
+  expect(find.byKey(const ValueKey('drive-last-backup')), findsOneWidget);
+  expect(fakes.drive.files.keys, containsAll(['goals/water.json', 'goals/stanford-cs229.json', 'settings.json']));
+  String waterEvents() => fakes.drive.files.entries
+      .where((e) => e.key.startsWith('events/'))
+      .map((e) => e.value)
+      .join()
+      .split('\n')
+      .where((l) => l.contains('"goal":"water"'))
+      .join('\n');
+  expect(RegExp('count_delta').allMatches(waterEvents()), hasLength(1));
+  await goBack(tester);
+
+  // A change is backed up on its own after a short wait.
+  await tester.tap(find.descendant(of: water, matching: find.byKey(const ValueKey('counter:increment'))));
+  await settle(tester);
+  await waitAutoBackup();
+  expect(RegExp('count_delta').allMatches(waterEvents()), hasLength(2));
+
+  // Lose the goal, then restore it from Drive with its progress.
+  await tapText(tester, 'Drink water');
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Delete goal');
+  await tapText(tester, 'Delete');
+  expect(find.text('Drink water'), findsNothing);
+  await openSettings();
+  await tapKey(tester, 'drive-restore');
+  await tester.tap(find.text('Restore').last);
+  await settle(tester);
+  await goBack(tester);
+  expect(find.descendant(of: water, matching: find.text('2 / 8 glasses')), findsOneWidget);
+
+  await openSettings();
+  await tapKey(tester, 'drive-delete');
+  await tester.tap(find.text('Delete').last);
+  await settle(tester);
+  expect(fakes.drive.files, isEmpty);
+  await tapKey(tester, 'drive-disconnect');
+  expect(find.text('Connect Google Drive'), findsOneWidget);
+  expect(fakes.driveAccount.signedIn, false);
   await goBack(tester);
 }

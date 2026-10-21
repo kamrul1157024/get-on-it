@@ -1,0 +1,39 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "deep-work-pdf",
+  "template": "book@1",
+  "title": "Read Deep Work",
+  "accent": "#5aa9e6",
+  "icon": "📖",
+  "startDate": "2026-10-21",
+  "deadline": "2026-12-15",
+  "schedule": {
+    "days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri",
+      "sat"
+    ]
+  },
+  "reminders": {
+    "preset": "gentle",
+    "time": "21:30"
+  },
+  "data": {
+    "book": {
+      "title": "Deep Work",
+      "author": "Cal Newport"
+    },
+    "source": {
+      "kind": "local_file"
+    },
+    "pages": {
+      "start": 1,
+      "end": 296,
+      "perDay": 7
+    }
+  }
+}

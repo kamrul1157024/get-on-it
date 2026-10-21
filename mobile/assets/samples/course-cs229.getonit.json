@@ -29,7 +29,8 @@
         "title": "Lecture 1: Introduction",
         "videoId": "jGwO_UgTS7I",
         "durationSec": 4520,
-        "week": 1
+        "week": 1,
+        "embeddable": false
       },
       {
         "id": "lec-02",
@@ -37,7 +38,8 @@
         "title": "Lecture 2: Linear Regression and Gradient Descent",
         "videoId": "4b4MUYve_U8",
         "durationSec": 4697,
-        "week": 1
+        "week": 1,
+        "embeddable": false
       },
       {
         "id": "lec-03",
@@ -45,7 +47,8 @@
         "title": "Lecture 3: Locally Weighted & Logistic Regression",
         "videoId": "het9HFqo1TQ",
         "durationSec": 4774,
-        "week": 2
+        "week": 2,
+        "embeddable": false
       },
       {
         "id": "lec-04",
@@ -53,7 +56,8 @@
         "title": "Lecture 4: Perceptron & Generalized Linear Model",
         "videoId": "iZTeva0WSTQ",
         "durationSec": 4922,
-        "week": 2
+        "week": 2,
+        "embeddable": false
       },
       {
         "id": "pset-1",
@@ -68,7 +72,8 @@
         "title": "Lecture 5: GDA & Naive Bayes",
         "videoId": "nt63k3bfXS0",
         "durationSec": 4732,
-        "week": 3
+        "week": 3,
+        "embeddable": false
       },
       {
         "id": "lec-06",
@@ -76,7 +81,8 @@
         "title": "Lecture 6: Support Vector Machines",
         "videoId": "lDwow4aOrtg",
         "durationSec": 4857,
-        "week": 3
+        "week": 3,
+        "embeddable": false
       },
       {
         "id": "lec-07",
@@ -84,7 +90,8 @@
         "title": "Lecture 7: Kernels",
         "videoId": "8NYoQiRANpg",
         "durationSec": 4825,
-        "week": 4
+        "week": 4,
+        "embeddable": false
       },
       {
         "id": "lec-08",
@@ -92,7 +99,8 @@
         "title": "Lecture 8: Data Splits, Models & Cross-Validation",
         "videoId": "rjbkWSTjHzM",
         "durationSec": 5006,
-        "week": 4
+        "week": 4,
+        "embeddable": false
       },
       {
         "id": "discussion-learning-theory",
@@ -100,7 +108,8 @@
         "title": "Discussion: Learning Theory",
         "videoId": "iVOxMcumR4A",
         "durationSec": 5163,
-        "week": 5
+        "week": 5,
+        "embeddable": false
       },
       {
         "id": "lec-09",
@@ -108,7 +117,8 @@
         "title": "Lecture 9: Decision Trees and Ensemble Methods",
         "videoId": "wr9gUr-eWdA",
         "durationSec": 4841,
-        "week": 5
+        "week": 5,
+        "embeddable": false
       },
       {
         "id": "lec-10",
@@ -116,7 +126,8 @@
         "title": "Lecture 10: Introduction to Neural Networks",
         "videoId": "MfIjxPh6Pys",
         "durationSec": 4814,
-        "week": 6
+        "week": 6,
+        "embeddable": false
       },
       {
         "id": "lec-11",
@@ -124,7 +135,8 @@
         "title": "Lecture 11: Backprop & Improving Neural Networks",
         "videoId": "zUazLXZZA2U",
         "durationSec": 4598,
-        "week": 6
+        "week": 6,
+        "embeddable": false
       },
       {
         "id": "lec-12",
@@ -132,7 +144,8 @@
         "title": "Lecture 12: Debugging ML Models and Error Analysis",
         "videoId": "ORrStCArmP4",
         "durationSec": 4735,
-        "week": 7
+        "week": 7,
+        "embeddable": false
       },
       {
         "id": "lec-13",
@@ -140,7 +153,8 @@
         "title": "Lecture 13: Expectation-Maximization Algorithms",
         "videoId": "rVfZHWTwXSA",
         "durationSec": 4831,
-        "week": 7
+        "week": 7,
+        "embeddable": false
       },
       {
         "id": "lec-14",
@@ -148,7 +162,8 @@
         "title": "Lecture 14: EM Algorithm & Factor Analysis",
         "videoId": "tw6cmL5STuY",
         "durationSec": 4788,
-        "week": 8
+        "week": 8,
+        "embeddable": false
       },
       {
         "id": "lec-15",
@@ -156,7 +171,8 @@
         "title": "Lecture 15: PCA and ICA",
         "videoId": "dyb_cFywuik",
         "durationSec": 4715,
-        "week": 8
+        "week": 8,
+        "embeddable": false
       },
       {
         "id": "lec-16",
@@ -164,7 +180,8 @@
         "title": "Lecture 16: Independent Component Analysis & RL",
         "videoId": "YQA9lLdLig8",
         "durationSec": 4690,
-        "week": 9
+        "week": 9,
+        "embeddable": false
       },
       {
         "id": "lec-17",
@@ -172,7 +189,8 @@
         "title": "Lecture 17: MDPs & Value/Policy Iteration",
         "videoId": "d5gaWTo6kDM",
         "durationSec": 4754,
-        "week": 9
+        "week": 9,
+        "embeddable": false
       },
       {
         "id": "lec-18",
@@ -180,7 +198,8 @@
         "title": "Lecture 18: Continous State MDP & Model Simulation",
         "videoId": "QFu5nuc-S0s",
         "durationSec": 4815,
-        "week": 10
+        "week": 10,
+        "embeddable": false
       },
       {
         "id": "lec-19",
@@ -188,7 +207,8 @@
         "title": "Lecture 19: Reward Model & Linear Dynamical System",
         "videoId": "0rt2CsEQv6U",
         "durationSec": 4867,
-        "week": 10
+        "week": 10,
+        "embeddable": false
       },
       {
         "id": "lec-20",
@@ -196,7 +216,8 @@
         "title": "Lecture 20: RL Debugging and Diagnostics",
         "videoId": "pLhPQynL0tY",
         "durationSec": 4363,
-        "week": 11
+        "week": 11,
+        "embeddable": false
       }
     ]
   }

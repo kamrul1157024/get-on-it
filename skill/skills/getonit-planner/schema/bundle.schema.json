@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://getonit.invalid/schema/bundle.schema.json",
+  "title": "Get On It bundle document",
+  "description": "Several documents in one file. The app imports the templates first, then the goals. Documents inherit the bundle's schemaVersion.",
+  "type": "object",
+  "required": ["kind", "schemaVersion", "documents"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "bundle" },
+    "schemaVersion": { "type": "string", "pattern": "^1\\.\\d+$" },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": { "kind": { "enum": ["goal", "template"] } },
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "goal" } } },
+            "then": { "$ref": "goal.schema.json#/$defs/goal" }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "template" } } },
+            "then": { "$ref": "template.schema.json#/$defs/template" }
+          }
+        ]
+      }
+    }
+  }
+}
