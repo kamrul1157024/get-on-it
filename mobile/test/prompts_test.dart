@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:getonit/app/providers.dart';
 import 'package:getonit/core/events/goal_event.dart';
+import 'package:getonit/core/schema/capabilities.dart';
 import 'package:getonit/core/schema/documents.dart';
 import 'package:getonit/core/schema/validator.dart';
 import 'package:getonit/core/time/day_clock.dart';
@@ -17,17 +18,24 @@ void main() {
     for (final n in ['course', 'book', 'habit']) '$n@1': TemplateDoc(readJson('assets/templates/$n.json')),
   };
   final today = DateTime(2026, 10, 21);
+  // Bindings like {{state.count}} belong in the prompt; fill-in slots do not.
+  final placeholder = RegExp(
+    r'\{\{(today|request|example|customExample|uiReference|goal|progress|currentTemplate)\}\}',
+  );
+  final uiReference = File('assets/prompt/ui_reference.md').readAsStringSync();
 
   test('the new-plan prompt has the request, the date, and a valid example', () {
     final prompt = fillPlanPrompt(
       template: File('assets/prompt/plan_prompt.md').readAsStringSync(),
       example: File('assets/samples/book-atomic-habits.getonit.json').readAsStringSync(),
+      customExample: File('assets/prompt/custom_example.json').readAsStringSync(),
+      uiReference: uiReference,
       request: 'Read Deep Work by December',
       today: today,
     );
     expect(prompt, contains('Read Deep Work by December'));
     expect(prompt, contains('2026-10-21 (Wednesday)'));
-    expect(prompt, isNot(contains('{{')));
+    expect(prompt, isNot(contains(placeholder)));
     for (final t in ['course@1', 'book@1', 'habit@1']) {
       expect(prompt, contains(t));
     }
@@ -35,6 +43,28 @@ void main() {
     // format the app rejects.
     final parsed = parseImport(prompt, (r) => templates[r]);
     expect(parsed.ok, true, reason: '${parsed.issues}');
+    expect(prompt, contains('"kind": "bundle"'));
+    expect(prompt, contains('# Custom look'));
+  });
+
+  test('the custom-template example imports, with a screen and both widget surfaces', () {
+    final parsed = parseImport(File('assets/prompt/custom_example.json').readAsStringSync(), (r) => templates[r]);
+    expect(parsed.ok, true, reason: '${parsed.issues}');
+    expect(parsed.issues, isEmpty);
+    final t = parsed.templates.single;
+    for (final s in ['screen', 'tile', 'tile_wide']) {
+      expect(t.surface(s), isNotNull, reason: s);
+    }
+    expect(parsed.goals.single.templateRef, '${t.id}@1');
+  });
+
+  test('the UI reference names every component, action, and engine the app supports', () {
+    for (final name in [...Capabilities.components, ...Capabilities.actions]) {
+      expect(uiReference, contains('- $name'), reason: name);
+    }
+    for (final e in Capabilities.engines.difference({'by_mode'})) {
+      expect(uiReference, contains('"$e"'), reason: e);
+    }
   });
 
   test('the change prompt has the plan, the progress, and the keep-the-ids rules', () {
@@ -51,6 +81,7 @@ void main() {
     final view = GoalView(goal: goal, template: templates['course@1'], state: state, createdAt: DateTime(2026, 10, 1));
     final prompt = fillEditPrompt(
       template: File('assets/prompt/edit_prompt.md').readAsStringSync(),
+      uiReference: uiReference,
       view: view,
       request: 'Move the deadline two weeks later',
       today: today,
@@ -60,7 +91,10 @@ void main() {
     expect(prompt, contains('Done item ids: lec-01'));
     expect(prompt, contains('Next item: Lecture 2: Linear Regression and Gradient Descent'));
     expect(prompt, contains('Keep the "id" of every existing item and step'));
-    expect(prompt, isNot(contains('{{')));
+    // The template is there, so the AI can change the screen and widgets.
+    expect(prompt, contains('"engine": "video_series"'));
+    expect(prompt, contains('# Custom look'));
+    expect(prompt, isNot(contains(placeholder)));
     // The plan inside the prompt is a valid document on its own.
     expect(parseImport(prompt, (r) => templates[r]).ok, true);
   });

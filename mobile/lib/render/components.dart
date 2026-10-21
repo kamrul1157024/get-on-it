@@ -58,6 +58,9 @@ Widget _column(Map<String, Object?> n, RenderContext rc) {
 
 const _shrinkable = {'text', 'column', 'row', 'stat', 'badge', 'list', 'section'};
 
+// These fill the width they get, so a row must give them a bounded share.
+const _filling = {'progress_bar', 'number_input', 'week_dots', 'heatmap', 'grid'};
+
 Widget _row(Map<String, Object?> n, RenderContext rc) {
   final align = n.str('align', rc.scope);
   final raw = n['children'] as List? ?? const [];
@@ -67,7 +70,7 @@ Widget _row(Map<String, Object?> n, RenderContext rc) {
   final children = <Widget>[
     for (final c in raw.whereType<Map>())
       if (!c.containsKey('visible') || c.cast<String, Object?>().flag('visible', rc.scope))
-        if (c['expand'] == true)
+        if (c['expand'] == true || _filling.contains(c['type']) || (c['type'] == 'button' && c['full'] == true))
           Expanded(child: buildNode(c, rc))
         else if (_shrinkable.contains(c['type']))
           Flexible(child: buildNode(c, rc))

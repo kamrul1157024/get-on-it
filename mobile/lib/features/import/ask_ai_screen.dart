@@ -14,27 +14,34 @@ import 'import_screen.dart';
 String fillPlanPrompt({
   required String template,
   required String example,
+  required String customExample,
+  required String uiReference,
   required String request,
   required DateTime today,
 }) => template
+    .replaceAll('{{uiReference}}', uiReference.trim())
+    .replaceAll('{{customExample}}', customExample.trim())
+    .replaceAll('{{example}}', example.trim())
     .replaceAll('{{today}}', DateFormat('yyyy-MM-dd (EEEE)').format(today))
-    .replaceAll('{{request}}', request.trim().isEmpty ? 'Help me pick one goal and make a plan.' : request.trim())
-    .replaceAll('{{example}}', example.trim());
+    .replaceAll('{{request}}', request.trim().isEmpty ? 'Help me pick one goal and make a plan.' : request.trim());
 
 /// Fills the change prompt (assets/prompt/edit_prompt.md) for one goal.
 String fillEditPrompt({
   required String template,
+  required String uiReference,
   required GoalView view,
   required String request,
   required DateTime today,
 }) => template
+    .replaceAll('{{uiReference}}', uiReference.trim())
+    .replaceAll('{{currentTemplate}}', const JsonEncoder.withIndent('  ').convert(view.template?.json ?? const {}))
+    .replaceAll('{{goal}}', const JsonEncoder.withIndent('  ').convert(view.goal.json))
+    .replaceAll('{{progress}}', progressSummary(view))
     .replaceAll('{{today}}', DateFormat('yyyy-MM-dd (EEEE)').format(today))
     .replaceAll(
       '{{request}}',
       request.trim().isEmpty ? 'Look at my progress and suggest a better plan.' : request.trim(),
-    )
-    .replaceAll('{{goal}}', const JsonEncoder.withIndent('  ').convert(view.goal.json))
-    .replaceAll('{{progress}}', progressSummary(view));
+    );
 
 /// A few lines the AI needs to change a plan well: where the user is, the
 /// pace, and which items are already done (their ids must stay).
@@ -62,6 +69,8 @@ String progressSummary(GoalView view) {
 Future<String> buildPlanPrompt(String request, DateTime today) async => fillPlanPrompt(
   template: await rootBundle.loadString('assets/prompt/plan_prompt.md'),
   example: await rootBundle.loadString('assets/samples/book-atomic-habits.getonit.json'),
+  customExample: await rootBundle.loadString('assets/prompt/custom_example.json'),
+  uiReference: await rootBundle.loadString('assets/prompt/ui_reference.md'),
   request: request,
   today: today,
 );
@@ -108,6 +117,7 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
         ? await buildPlanPrompt(_request.text, today)
         : fillEditPrompt(
             template: await rootBundle.loadString('assets/prompt/edit_prompt.md'),
+            uiReference: await rootBundle.loadString('assets/prompt/ui_reference.md'),
             view: view,
             request: _request.text,
             today: today,
