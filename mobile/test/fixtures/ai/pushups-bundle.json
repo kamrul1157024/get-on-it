@@ -1,0 +1,306 @@
+{
+  "kind": "bundle",
+  "schemaVersion": "1.0",
+  "documents": [
+    {
+      "kind": "template",
+      "id": "pushup-tracker",
+      "version": "1.0.0",
+      "title": "Push-up Tracker",
+      "description": "Track daily push-ups with quick-add buttons for sets and links to form videos.",
+      "engine": "count",
+      "dataSchema": {
+        "type": "object",
+        "required": ["unit", "target", "period"],
+        "properties": {
+          "unit": {"type": "string"},
+          "target": {"type": "integer", "minimum": 1},
+          "period": {"enum": ["day", "week"]},
+          "pushUpsPerSet": {"type": "integer", "minimum": 1},
+          "formVideos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "url"],
+              "properties": {
+                "title": {"type": "string"},
+                "url": {"type": "string", "pattern": "^https://"}
+              }
+            }
+          }
+        }
+      },
+      "surfaces": {
+        "screen": {
+          "type": "column",
+          "gap": 16,
+          "children": [
+            {
+              "type": "card",
+              "child": {
+                "type": "row",
+                "gap": 16,
+                "children": [
+                  {
+                    "type": "progress_ring",
+                    "value": "{{state.progress}}",
+                    "size": 96,
+                    "stroke": 10,
+                    "label": "{{state.count}}",
+                    "sublabel": "of {{state.target}}"
+                  },
+                  {
+                    "type": "column",
+                    "gap": 6,
+                    "expand": true,
+                    "children": [
+                      {
+                        "type": "text",
+                        "style": "title",
+                        "value": "{{goal.title}}"
+                      },
+                      {
+                        "type": "text",
+                        "style": "caption",
+                        "value": "{{state.label}} {{state.periodLabel}}"
+                      },
+                      {
+                        "type": "row",
+                        "gap": 6,
+                        "children": [
+                          {
+                            "type": "badge",
+                            "visible": "{{state.pace.label}}",
+                            "label": "{{state.pace.label}}",
+                            "tone": "{{state.pace.tone}}"
+                          },
+                          {
+                            "type": "badge",
+                            "visible": "{{state.todayComplete}}",
+                            "label": "Done for today",
+                            "tone": "success"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "counter",
+                    "decrement": {
+                      "type": "log_progress",
+                      "params": {
+                        "goalId": "{{goal.id}}",
+                        "delta": -1
+                      }
+                    },
+                    "increment": {
+                      "type": "log_progress",
+                      "params": {
+                        "goalId": "{{goal.id}}",
+                        "delta": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "row",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "button",
+                  "variant": "filled",
+                  "full": true,
+                  "label": "+{{data.pushUpsPerSet}} push-ups",
+                  "action": {
+                    "type": "log_progress",
+                    "params": {
+                      "goalId": "{{goal.id}}",
+                      "delta": "{{data.pushUpsPerSet}}"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "card",
+              "child": {
+                "type": "column",
+                "gap": 14,
+                "children": [
+                  {
+                    "type": "row",
+                    "align": "between",
+                    "children": [
+                      {
+                        "type": "stat",
+                        "value": "{{state.streakLabel}}",
+                        "label": "Streak"
+                      },
+                      {
+                        "type": "stat",
+                        "value": "{{state.pctLabel}}",
+                        "label": "Progress"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "week_dots",
+                    "days": "{{state.week}}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "section",
+              "title": "Form Videos",
+              "visible": "{{data.formVideos}}",
+              "child": {
+                "type": "list",
+                "items": "{{data.formVideos}}",
+                "as": "video",
+                "gap": 6,
+                "item": {
+                  "type": "button",
+                  "variant": "outlined",
+                  "icon": "🎥",
+                  "label": "{{video.title}}",
+                  "full": true,
+                  "action": {
+                    "type": "open_external",
+                    "params": {
+                      "url": "{{video.url}}"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "section",
+              "title": "Last 12 weeks",
+              "child": {
+                "type": "heatmap",
+                "cells": "{{state.heatmap}}"
+              }
+            }
+          ]
+        },
+        "tile": {
+          "type": "card",
+          "style": "tile",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "column",
+            "gap": 6,
+            "align": "center",
+            "children": [
+              {
+                "type": "progress_ring",
+                "value": "{{state.progress}}",
+                "size": 56,
+                "stroke": 6,
+                "label": "{{goal.icon}}"
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "{{state.count}}/{{state.target}}",
+                "maxLines": 1
+              }
+            ]
+          }
+        },
+        "tile_wide": {
+          "type": "card",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "row",
+            "gap": 12,
+            "children": [
+              {
+                "type": "icon",
+                "name": "{{goal.icon}}",
+                "box": true
+              },
+              {
+                "type": "column",
+                "gap": 2,
+                "expand": true,
+                "children": [
+                  {
+                    "type": "text",
+                    "style": "subtitle",
+                    "value": "{{goal.title}}",
+                    "maxLines": 1
+                  },
+                  {
+                    "type": "text",
+                    "style": "caption",
+                    "value": "{{state.label}} {{state.periodLabel}}"
+                  }
+                ]
+              },
+              {
+                "type": "button",
+                "variant": "tonal",
+                "label": "+{{data.pushUpsPerSet}}",
+                "action": {
+                  "type": "log_progress",
+                  "params": {
+                    "goalId": "{{goal.id}}",
+                    "delta": "{{data.pushUpsPerSet}}"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "goal",
+      "id": "daily-pushups",
+      "template": "pushup-tracker@1",
+      "title": "30 Push-ups Daily",
+      "icon": "💪",
+      "accent": "#ff6b6b",
+      "reminders": {
+        "preset": "gentle",
+        "time": "19:00"
+      },
+      "data": {
+        "unit": "push-ups",
+        "target": 30,
+        "period": "day",
+        "pushUpsPerSet": 10,
+        "formVideos": [
+          {
+            "title": "Perfect Push-up Form",
+            "url": "https://www.youtube.com/watch?v=IODxDxX7oi4"
+          },
+          {
+            "title": "Common Push-up Mistakes",
+            "url": "https://www.youtube.com/watch?v=_l3ySVKYVJ8"
+          },
+          {
+            "title": "Push-up Progressions",
+            "url": "https://www.youtube.com/watch?v=4dF1DOWzf20"
+          }
+        ]
+      }
+    }
+  ]
+}

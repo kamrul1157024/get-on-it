@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../app/providers.dart';
 import '../settings/settings_screen.dart' show appVersion;
@@ -64,10 +63,8 @@ class SystemApkInstaller implements ApkInstaller {
       if (total > 0) onProgress?.call(received / total);
     }).asFuture<void>();
     await sink.close();
-    // Android 8+ asks once for permission to install apps from this app.
-    if (!await Permission.requestInstallPackages.isGranted) {
-      await Permission.requestInstallPackages.request();
-    }
+    // Android 8+ asks the user, the first time, to allow installs from this
+    // app (REQUEST_INSTALL_PACKAGES), then shows its installer.
     await OpenFile.open(file.path, type: 'application/vnd.android.package-archive');
   }
 }

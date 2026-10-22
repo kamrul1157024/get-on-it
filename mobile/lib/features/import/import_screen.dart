@@ -385,13 +385,16 @@ class _SurfaceTabsState extends State<_SurfaceTabs> {
         onAction: tapped,
         onLayout: (ok) => widget.onLayout(s, ok),
       );
+      // Drawn at the width it gets on the phone, then scaled down to fit:
+      // a narrower layout would wrap text that the real screen does not.
+      final full = MediaQuery.sizeOf(context).width - 32;
       final Widget box = switch (s) {
         'screen' => SizedBox(
           height: 420,
-          child: SingleChildScrollView(padding: const EdgeInsets.all(12), child: preview),
+          child: SingleChildScrollView(padding: const EdgeInsets.all(12), child: _AtWidth(full, preview)),
         ),
         'tile' => Center(child: SizedBox(width: 170, child: preview)),
-        _ => preview,
+        _ => _AtWidth(full, preview),
       };
       return Offstage(
         offstage: s != _shown,
@@ -450,6 +453,25 @@ class _SurfaceTabsState extends State<_SurfaceTabs> {
       ],
     );
   }
+}
+
+/// Lays [child] out at [width] and scales it down to the space there is.
+class _AtWidth extends StatelessWidget {
+  const _AtWidth(this.width, this.child);
+
+  final double width;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => box.maxWidth >= width
+        ? child
+        : FittedBox(
+            fit: BoxFit.fitWidth,
+            alignment: Alignment.topLeft,
+            child: SizedBox(width: width, child: child),
+          ),
+  );
 }
 
 /// Copies a prompt that asks the AI to fix what the app found, and can open

@@ -1,0 +1,772 @@
+{
+  "kind": "bundle",
+  "schemaVersion": "1.0",
+  "documents": [
+    {
+      "kind": "template",
+      "schemaVersion": "1.0",
+      "id": "stanford-cs229-custom",
+      "version": "1.0.0",
+      "title": "CS229 Custom Template",
+      "description": "Custom template for Stanford CS229 with resources and enhanced widget",
+      "engine": "video_series",
+      "dataSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "provider": {
+            "enum": ["youtube"]
+          },
+          "playlistUrl": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "completionThreshold": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 1
+          },
+          "dailyTargetMinutes": {
+            "type": "number",
+            "minimum": 1
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "url"],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://"
+                }
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "title"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "kind": {
+                  "enum": ["video", "task"]
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "videoId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{6,20}$"
+                },
+                "durationSec": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "week": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://"
+                },
+                "embeddable": {
+                  "type": "boolean"
+                }
+              },
+              "if": {
+                "required": ["kind"],
+                "properties": {
+                  "kind": {
+                    "const": "task"
+                  }
+                }
+              },
+              "then": {},
+              "else": {
+                "required": ["videoId", "durationSec"]
+              }
+            }
+          }
+        }
+      },
+      "surfaces": {
+        "screen": {
+          "type": "column",
+          "gap": 16,
+          "children": [
+            {
+              "type": "card",
+              "id": "up-next",
+              "visible": "{{state.hasNext}}",
+              "child": {
+                "type": "column",
+                "gap": 14,
+                "children": [
+                  {
+                    "type": "row",
+                    "gap": 10,
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "{{goal.icon}}",
+                        "box": true
+                      },
+                      {
+                        "type": "column",
+                        "expand": true,
+                        "children": [
+                          {
+                            "type": "text",
+                            "style": "label",
+                            "value": "Up next"
+                          },
+                          {
+                            "type": "text",
+                            "style": "subtitle",
+                            "value": "{{goal.title}}",
+                            "maxLines": 1
+                          }
+                        ]
+                      },
+                      {
+                        "type": "badge",
+                        "visible": "{{state.pace.label}}",
+                        "label": "{{state.pace.label}}",
+                        "tone": "{{state.pace.tone}}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "row",
+                    "gap": 12,
+                    "align": "top",
+                    "children": [
+                      {
+                        "type": "media",
+                        "kind": "video",
+                        "visible": "{{state.next.isVideo}}",
+                        "width": 128,
+                        "height": 72,
+                        "videoId": "{{state.next.videoId}}",
+                        "progress": "{{state.next.watched}}",
+                        "timestamp": "{{state.next.positionLabel}}"
+                      },
+                      {
+                        "type": "column",
+                        "gap": 4,
+                        "expand": true,
+                        "children": [
+                          {
+                            "type": "text",
+                            "style": "body",
+                            "value": "{{state.next.title}}"
+                          },
+                          {
+                            "type": "text",
+                            "style": "caption",
+                            "value": "{{state.next.sub}}"
+                          },
+                          {
+                            "type": "text",
+                            "style": "caption",
+                            "visible": "{{state.next.isVideo}}",
+                            "value": "Resume at {{state.next.positionLabel}} · {{state.next.remainingLabel}}"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "column",
+                    "gap": 6,
+                    "children": [
+                      {
+                        "type": "progress_bar",
+                        "value": "{{state.progress}}"
+                      },
+                      {
+                        "type": "text",
+                        "style": "caption",
+                        "value": "{{state.progressLabel}}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "row",
+                    "gap": 8,
+                    "children": [
+                      {
+                        "type": "button",
+                        "variant": "filled",
+                        "label": "▶ {{state.next.resumeLabel}}",
+                        "expand": true,
+                        "visible": "{{state.next.isVideo}}",
+                        "action": {
+                          "type": "open_video",
+                          "params": {
+                            "provider": "youtube",
+                            "videoId": "{{state.next.videoId}}",
+                            "startSec": "{{state.next.positionSec}}",
+                            "goalId": "{{goal.id}}",
+                            "itemId": "{{state.next.id}}",
+                            "embeddable": "{{state.next.embeddable}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "button",
+                        "variant": "filled",
+                        "label": "Open task",
+                        "expand": true,
+                        "visible": "{{state.next.url}}",
+                        "action": {
+                          "type": "open_external",
+                          "params": {
+                            "url": "{{state.next.url}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "button",
+                        "variant": "tonal",
+                        "label": "Mark done",
+                        "action": {
+                          "type": "mark_done",
+                          "params": {
+                            "goalId": "{{goal.id}}",
+                            "itemId": "{{state.next.id}}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "card",
+              "visible": "{{state.isComplete}}",
+              "style": "tonal",
+              "child": {
+                "type": "text",
+                "style": "title",
+                "value": "Course complete 🎉"
+              }
+            },
+            {
+              "type": "card",
+              "id": "progress",
+              "child": {
+                "type": "column",
+                "gap": 14,
+                "children": [
+                  {
+                    "type": "row",
+                    "gap": 16,
+                    "children": [
+                      {
+                        "type": "progress_ring",
+                        "value": "{{state.progress}}",
+                        "size": 96,
+                        "stroke": 10,
+                        "label": "{{state.pctLabel}}",
+                        "sublabel": "by time"
+                      },
+                      {
+                        "type": "column",
+                        "gap": 10,
+                        "expand": true,
+                        "children": [
+                          {
+                            "type": "row",
+                            "align": "between",
+                            "children": [
+                              {
+                                "type": "stat",
+                                "value": "{{state.lecturesLabel}}",
+                                "label": "Videos"
+                              },
+                              {
+                                "type": "stat",
+                                "value": "{{state.hoursLabel}}",
+                                "label": "Watched"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "row",
+                            "align": "between",
+                            "children": [
+                              {
+                                "type": "stat",
+                                "value": "{{state.streakLabel}}",
+                                "label": "Streak"
+                              },
+                              {
+                                "type": "stat",
+                                "visible": "{{goal.deadline}}",
+                                "value": "{{state.deadlineLabel}}",
+                                "label": "Until deadline"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "week_dots",
+                    "days": "{{state.week}}"
+                  },
+                  {
+                    "type": "text",
+                    "style": "caption",
+                    "visible": "{{state.paceText}}",
+                    "value": "{{state.paceText}}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "section",
+              "title": "Resources",
+              "child": {
+                "type": "card",
+                "child": {
+                  "type": "list",
+                  "items": "{{data.resources}}",
+                  "as": "resource",
+                  "item": {
+                    "type": "row",
+                    "gap": 12,
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "📄"
+                      },
+                      {
+                        "type": "column",
+                        "expand": true,
+                        "children": [
+                          {
+                            "type": "text",
+                            "style": "body",
+                            "value": "{{resource.title}}"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "button",
+                        "variant": "text",
+                        "label": "Open",
+                        "action": {
+                          "type": "open_external",
+                          "params": {
+                            "url": "{{resource.url}}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "type": "section",
+              "title": "Lectures",
+              "child": {
+                "type": "card",
+                "child": {
+                  "type": "list",
+                  "items": "{{state.items}}",
+                  "as": "it",
+                  "item": {
+                    "type": "column",
+                    "children": [
+                      {
+                        "type": "checklist_item",
+                        "visible": "{{it.isVideo}}",
+                        "label": "{{it.title}}",
+                        "sublabel": "{{it.sub}}",
+                        "checked": "{{it.done}}",
+                        "action": {
+                          "type": "open_video",
+                          "params": {
+                            "provider": "youtube",
+                            "videoId": "{{it.videoId}}",
+                            "startSec": "{{it.positionSec}}",
+                            "goalId": "{{goal.id}}",
+                            "itemId": "{{it.id}}",
+                            "embeddable": "{{it.embeddable}}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "checklist_item",
+                        "visible": "{{it.isTask}}",
+                        "label": "{{it.title}}",
+                        "sublabel": "{{it.sub}}",
+                        "checked": "{{it.done}}",
+                        "action": {
+                          "type": "toggle_done",
+                          "params": {
+                            "goalId": "{{goal.id}}",
+                            "itemId": "{{it.id}}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "tile_wide": {
+          "type": "card",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "column",
+            "gap": 10,
+            "children": [
+              {
+                "type": "row",
+                "gap": 10,
+                "children": [
+                  {
+                    "type": "column",
+                    "gap": 2,
+                    "expand": true,
+                    "children": [
+                      {
+                        "type": "text",
+                        "style": "subtitle",
+                        "value": "{{goal.title}}",
+                        "maxLines": 1
+                      },
+                      {
+                        "type": "text",
+                        "style": "caption",
+                        "visible": "{{state.hasNext}}",
+                        "value": "{{state.next.title}}",
+                        "maxLines": 1
+                      }
+                    ]
+                  },
+                  {
+                    "type": "stat",
+                    "value": "{{state.streakLabel}}",
+                    "label": "Streak"
+                  }
+                ]
+              },
+              {
+                "type": "button",
+                "variant": "filled",
+                "visible": "{{state.next.isVideo}}",
+                "label": "▶ {{state.next.resumeLabel}}",
+                "full": true,
+                "action": {
+                  "type": "open_video",
+                  "params": {
+                    "provider": "youtube",
+                    "videoId": "{{state.next.videoId}}",
+                    "startSec": "{{state.next.positionSec}}",
+                    "goalId": "{{goal.id}}",
+                    "itemId": "{{state.next.id}}",
+                    "embeddable": "{{state.next.embeddable}}"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "tile": {
+          "type": "card",
+          "style": "tile",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "column",
+            "gap": 6,
+            "align": "center",
+            "children": [
+              {
+                "type": "progress_ring",
+                "value": "{{state.progress}}",
+                "size": 64,
+                "stroke": 7,
+                "label": "{{state.pctLabel}}"
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "{{state.next.title}}",
+                "maxLines": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "goal",
+      "schemaVersion": "1.0",
+      "id": "stanford-cs229",
+      "template": "stanford-cs229-custom@1",
+      "title": "Stanford CS229: Machine Learning",
+      "accent": "#e0573f",
+      "icon": "🎓",
+      "deadline": "2026-12-31",
+      "schedule": {
+        "days": [
+          "mon",
+          "wed",
+          "fri"
+        ]
+      },
+      "reminders": {
+        "preset": "firm",
+        "time": "19:00"
+      },
+      "nudges": {
+        "suggestedApps": [
+          "com.instagram.android",
+          "com.google.android.youtube"
+        ]
+      },
+      "data": {
+        "provider": "youtube",
+        "playlistUrl": "https://www.youtube.com/playlist?list=PLoROMvodv4rMiGQp3WXShtMGgzqpfVfbU",
+        "dailyTargetMinutes": 30,
+        "resources": [
+          {
+            "title": "Course Notes (PDF)",
+            "url": "https://cs229.stanford.edu/main_notes.pdf"
+          }
+        ],
+        "items": [
+          {
+            "id": "lec-01",
+            "kind": "video",
+            "title": "Lecture 1: Introduction",
+            "videoId": "jGwO_UgTS7I",
+            "durationSec": 4520,
+            "week": 1,
+            "embeddable": false
+          },
+          {
+            "id": "lec-02",
+            "kind": "video",
+            "title": "Lecture 2: Linear Regression and Gradient Descent",
+            "videoId": "4b4MUYve_U8",
+            "durationSec": 4697,
+            "week": 1,
+            "embeddable": false
+          },
+          {
+            "id": "lec-03",
+            "kind": "video",
+            "title": "Lecture 3: Locally Weighted & Logistic Regression",
+            "videoId": "het9HFqo1TQ",
+            "durationSec": 4774,
+            "week": 2,
+            "embeddable": false
+          },
+          {
+            "id": "lec-04",
+            "kind": "video",
+            "title": "Lecture 4: Perceptron & Generalized Linear Model",
+            "videoId": "iZTeva0WSTQ",
+            "durationSec": 4922,
+            "week": 2,
+            "embeddable": false
+          },
+          {
+            "id": "pset-1",
+            "kind": "task",
+            "title": "Problem Set 1",
+            "url": "https://cs229.stanford.edu/",
+            "week": 3
+          },
+          {
+            "id": "lec-05",
+            "kind": "video",
+            "title": "Lecture 5: GDA & Naive Bayes",
+            "videoId": "nt63k3bfXS0",
+            "durationSec": 4732,
+            "week": 3,
+            "embeddable": false
+          },
+          {
+            "id": "lec-06",
+            "kind": "video",
+            "title": "Lecture 6: Support Vector Machines",
+            "videoId": "lDwow4aOrtg",
+            "durationSec": 4857,
+            "week": 3,
+            "embeddable": false
+          },
+          {
+            "id": "lec-07",
+            "kind": "video",
+            "title": "Lecture 7: Kernels",
+            "videoId": "8NYoQiRANpg",
+            "durationSec": 4825,
+            "week": 4,
+            "embeddable": false
+          },
+          {
+            "id": "lec-08",
+            "kind": "video",
+            "title": "Lecture 8: Data Splits, Models & Cross-Validation",
+            "videoId": "rjbkWSTjHzM",
+            "durationSec": 5006,
+            "week": 4,
+            "embeddable": false
+          },
+          {
+            "id": "discussion-learning-theory",
+            "kind": "video",
+            "title": "Discussion: Learning Theory",
+            "videoId": "iVOxMcumR4A",
+            "durationSec": 5163,
+            "week": 5,
+            "embeddable": false
+          },
+          {
+            "id": "lec-09",
+            "kind": "video",
+            "title": "Lecture 9: Decision Trees and Ensemble Methods",
+            "videoId": "wr9gUr-eWdA",
+            "durationSec": 4841,
+            "week": 5,
+            "embeddable": false
+          },
+          {
+            "id": "lec-10",
+            "kind": "video",
+            "title": "Lecture 10: Introduction to Neural Networks",
+            "videoId": "MfIjxPh6Pys",
+            "durationSec": 4814,
+            "week": 6,
+            "embeddable": false
+          },
+          {
+            "id": "lec-11",
+            "kind": "video",
+            "title": "Lecture 11: Backprop & Improving Neural Networks",
+            "videoId": "zUazLXZZA2U",
+            "durationSec": 4598,
+            "week": 6,
+            "embeddable": false
+          },
+          {
+            "id": "lec-12",
+            "kind": "video",
+            "title": "Lecture 12: Debugging ML Models and Error Analysis",
+            "videoId": "ORrStCArmP4",
+            "durationSec": 4735,
+            "week": 7,
+            "embeddable": false
+          },
+          {
+            "id": "lec-13",
+            "kind": "video",
+            "title": "Lecture 13: Expectation-Maximization Algorithms",
+            "videoId": "rVfZHWTwXSA",
+            "durationSec": 4831,
+            "week": 7,
+            "embeddable": false
+          },
+          {
+            "id": "lec-14",
+            "kind": "video",
+            "title": "Lecture 14: EM Algorithm & Factor Analysis",
+            "videoId": "tw6cmL5STuY",
+            "durationSec": 4788,
+            "week": 8,
+            "embeddable": false
+          },
+          {
+            "id": "lec-15",
+            "kind": "video",
+            "title": "Lecture 15: PCA and ICA",
+            "videoId": "dyb_cFywuik",
+            "durationSec": 4715,
+            "week": 8,
+            "embeddable": false
+          },
+          {
+            "id": "lec-16",
+            "kind": "video",
+            "title": "Lecture 16: Independent Component Analysis & RL",
+            "videoId": "YQA9lLdLig8",
+            "durationSec": 4690,
+            "week": 9,
+            "embeddable": false
+          },
+          {
+            "id": "lec-17",
+            "kind": "video",
+            "title": "Lecture 17: MDPs & Value/Policy Iteration",
+            "videoId": "d5gaWTo6kDM",
+            "durationSec": 4754,
+            "week": 9,
+            "embeddable": false
+          },
+          {
+            "id": "lec-18",
+            "kind": "video",
+            "title": "Lecture 18: Continous State MDP & Model Simulation",
+            "videoId": "QFu5nuc-S0s",
+            "durationSec": 4815,
+            "week": 10,
+            "embeddable": false
+          },
+          {
+            "id": "lec-19",
+            "kind": "video",
+            "title": "Lecture 19: Reward Model & Linear Dynamical System",
+            "videoId": "0rt2CsEQv6U",
+            "durationSec": 4867,
+            "week": 10,
+            "embeddable": false
+          },
+          {
+            "id": "lec-20",
+            "kind": "video",
+            "title": "Lecture 20: RL Debugging and Diagnostics",
+            "videoId": "pLhPQynL0tY",
+            "durationSec": 4363,
+            "week": 11,
+            "embeddable": false
+          }
+        ]
+      }
+    }
+  ]
+}

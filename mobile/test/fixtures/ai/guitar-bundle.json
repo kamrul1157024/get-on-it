@@ -1,0 +1,342 @@
+{
+ "kind": "bundle",
+ "schemaVersion": "1.0",
+ "documents": [
+  {
+   "kind": "template",
+   "id": "guitar-practice",
+   "version": "1.0.0",
+   "title": "Guitar Practice",
+   "description": "Track guitar practice sessions with a session checklist and lesson links.",
+   "engine": "count",
+   "dataSchema": {
+    "type": "object",
+    "required": ["target", "unit", "period", "sessionSteps"],
+    "properties": {
+     "unit": {"type": "string", "minLength": 1},
+     "target": {"type": "integer", "minimum": 1},
+     "period": {"enum": ["day", "week"]},
+     "sessionSteps": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": ["id", "title"],
+       "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"}
+       }
+      }
+     },
+     "lessons": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": ["title", "url"],
+       "properties": {
+        "title": {"type": "string"},
+        "url": {"type": "string", "pattern": "^https://"}
+       }
+      }
+     }
+    }
+   },
+   "surfaces": {
+    "screen": {
+     "type": "column",
+     "gap": 16,
+     "children": [
+      {
+       "type": "card",
+       "child": {
+        "type": "row",
+        "gap": 16,
+        "children": [
+         {
+          "type": "progress_ring",
+          "value": "{{state.progress}}",
+          "size": 96,
+          "stroke": 10,
+          "label": "{{state.count}}",
+          "sublabel": "of {{state.target}}"
+         },
+         {
+          "type": "column",
+          "gap": 6,
+          "expand": true,
+          "children": [
+           {
+            "type": "text",
+            "style": "title",
+            "value": "{{goal.title}}"
+           },
+           {
+            "type": "text",
+            "style": "caption",
+            "value": "{{state.label}} {{state.periodLabel}}"
+           },
+           {
+            "type": "row",
+            "gap": 6,
+            "children": [
+             {
+              "type": "badge",
+              "visible": "{{state.pace.label}}",
+              "label": "{{state.pace.label}}",
+              "tone": "{{state.pace.tone}}"
+             },
+             {
+              "type": "badge",
+              "visible": "{{state.todayComplete}}",
+              "label": "Done for today",
+              "tone": "success"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "type": "counter",
+          "decrement": {
+           "type": "log_progress",
+           "params": {
+            "goalId": "{{goal.id}}",
+            "delta": -1
+           }
+          },
+          "increment": {
+           "type": "log_progress",
+           "params": {
+            "goalId": "{{goal.id}}",
+            "delta": 1
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "type": "card",
+       "style": "outlined",
+       "child": {
+        "type": "column",
+        "gap": 10,
+        "children": [
+         {
+          "type": "text",
+          "style": "subtitle",
+          "value": "Each session"
+         },
+         {
+          "type": "list",
+          "items": "{{data.sessionSteps}}",
+          "as": "step",
+          "gap": 6,
+          "item": {
+           "type": "row",
+           "gap": 8,
+           "children": [
+            {
+             "type": "text",
+             "value": "✓",
+             "style": "body"
+            },
+            {
+             "type": "text",
+             "value": "{{step.title}}",
+             "style": "body"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "type": "card",
+       "child": {
+        "type": "column",
+        "gap": 14,
+        "children": [
+         {
+          "type": "row",
+          "align": "between",
+          "children": [
+           {
+            "type": "stat",
+            "value": "{{state.streakLabel}}",
+            "label": "Streak"
+           },
+           {
+            "type": "stat",
+            "value": "{{state.pctLabel}}",
+            "label": "This week"
+           }
+          ]
+         },
+         {
+          "type": "week_dots",
+          "days": "{{state.week}}"
+         }
+        ]
+       }
+      },
+      {
+       "type": "section",
+       "title": "JustinGuitar Lessons",
+       "visible": "{{data.lessons}}",
+       "child": {
+        "type": "list",
+        "items": "{{data.lessons}}",
+        "as": "lesson",
+        "gap": 6,
+        "item": {
+         "type": "button",
+         "variant": "outlined",
+         "full": true,
+         "icon": "🎸",
+         "label": "{{lesson.title}}",
+         "action": {
+          "type": "open_external",
+          "params": {
+           "url": "{{lesson.url}}"
+          }
+         }
+        }
+       }
+      },
+      {
+       "type": "section",
+       "title": "Last 12 weeks",
+       "child": {
+        "type": "heatmap",
+        "cells": "{{state.heatmap}}"
+       }
+      }
+     ]
+    },
+    "tile": {
+     "type": "card",
+     "style": "tile",
+     "accent": "{{goal.accent}}",
+     "action": {
+      "type": "open_goal",
+      "params": {
+       "goalId": "{{goal.id}}"
+      }
+     },
+     "child": {
+      "type": "column",
+      "gap": 6,
+      "align": "center",
+      "children": [
+       {
+        "type": "progress_ring",
+        "value": "{{state.progress}}",
+        "size": 56,
+        "stroke": 6,
+        "label": "{{goal.icon}}"
+       },
+       {
+        "type": "text",
+        "style": "caption",
+        "value": "{{state.label}}",
+        "maxLines": 1
+       }
+      ]
+     }
+    },
+    "tile_wide": {
+     "type": "card",
+     "accent": "{{goal.accent}}",
+     "action": {
+      "type": "open_goal",
+      "params": {
+       "goalId": "{{goal.id}}"
+      }
+     },
+     "child": {
+      "type": "row",
+      "gap": 12,
+      "children": [
+       {
+        "type": "icon",
+        "name": "{{goal.icon}}",
+        "box": true
+       },
+       {
+        "type": "column",
+        "gap": 2,
+        "expand": true,
+        "children": [
+         {
+          "type": "text",
+          "style": "subtitle",
+          "value": "{{goal.title}}",
+          "maxLines": 1
+         },
+         {
+          "type": "text",
+          "style": "caption",
+          "value": "{{state.label}} sessions"
+         }
+        ]
+       },
+       {
+        "type": "button",
+        "variant": "tonal",
+        "icon": "✓",
+        "label": "Log",
+        "action": {
+         "type": "log_progress",
+         "params": {
+          "goalId": "{{goal.id}}",
+          "delta": 1
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "kind": "goal",
+   "id": "learn-guitar",
+   "template": "guitar-practice@1",
+   "title": "Learn guitar",
+   "icon": "🎸",
+   "accent": "#ff6b6b",
+   "schedule": {
+    "days": ["mon", "tue", "wed", "thu", "fri"]
+   },
+   "reminders": {
+    "preset": "gentle",
+    "time": "18:00"
+   },
+   "data": {
+    "unit": "sessions",
+    "target": 5,
+    "period": "week",
+    "sessionSteps": [
+     {"id": "warmup", "title": "Warm-up (5 min)"},
+     {"id": "chords", "title": "Chord practice (8 min)"},
+     {"id": "song", "title": "Song practice (7 min)"}
+    ],
+    "lessons": [
+     {
+      "title": "Beginner Course Grade 1",
+      "url": "https://www.justinguitar.com/classes/beginner-guitar-course-grade-one"
+     },
+     {
+      "title": "Guitar Exercises",
+      "url": "https://www.justinguitar.com/categories/finger-gym-exercises"
+     },
+     {
+      "title": "Easy Songs for Beginners",
+      "url": "https://www.justinguitar.com/songs"
+     }
+    ]
+   }
+  }
+ ]
+}

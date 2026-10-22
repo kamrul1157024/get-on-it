@@ -22,13 +22,15 @@ Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Cl
 
 ## What it does
 
-- **Plans from AI.** Paste or share a plan from Claude or ChatGPT. The app checks it and shows a preview first.
+- **Plans from AI.** Paste or share a plan from Claude or ChatGPT. The app checks it and shows the real goal screen and both widgets before it saves anything. If something is wrong, **Fix with AI** copies a prompt with the exact problems.
+- **Your own screens and widgets.** Ask the AI for a custom look, or use **Change the look with AI** on a goal. The plan and your progress stay.
 - **Courses, books, and habits.** Watch YouTube lectures from where you stopped. Read today's PDF pages. Count glasses of water, tick a checklist, or avoid a habit.
 - **Progress you can trust.** Streaks, pace against your deadline, and fixed daily targets. Progress is stored as events, so a new version of a plan keeps your progress.
 - **Home-screen widgets.** A **Today** widget and a **Goal** widget. Buttons such as **+1** and **Done** work without opening the app.
 - **Reminders that push.** Notifications, sticky reminders, full-screen alarms, and strict alarms that ring until you make progress. You approve every reminder.
 - **Distraction nudges.** A short reminder of your goal when you unlock the phone or spend too long in an app that you choose.
 - **Google Drive backup.** Optional. The app can only see its own folder.
+- **Updates in the app.** When a new release is out, the app shows what changed and installs it for you.
 
 ## Screenshots
 

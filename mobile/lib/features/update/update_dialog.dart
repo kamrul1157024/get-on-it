@@ -125,7 +125,13 @@ class _ReleaseSection extends StatelessWidget {
           if (note.body.isEmpty)
             Text('No notes for this release.', style: t.bodySmall)
           else
-            MarkdownBody(data: note.body, styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))),
+            MarkdownBody(
+              data: note.body,
+              // GitHub's notes start with "## What's Changed"; a dialog needs
+              // small headings.
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                  .copyWith(h1: t.titleSmall, h2: t.titleSmall, h3: t.titleSmall, p: t.bodySmall),
+            ),
         ],
       ),
     );

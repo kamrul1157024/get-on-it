@@ -1,0 +1,531 @@
+[
+  {
+    "name": "pushups:tile",
+    "tree": {
+      "type": "card",
+      "style": "tile",
+      "accent": "#ff6b6b",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "daily-pushups"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 6,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": 0.0,
+            "size": 56,
+            "stroke": 6,
+            "label": "💪"
+          },
+          {
+            "type": "text",
+            "style": "caption",
+            "value": "0/30",
+            "maxLines": 1
+          }
+        ]
+      }
+    },
+    "texts": [
+      "0/30"
+    ]
+  },
+  {
+    "name": "pushups:tile_wide",
+    "tree": {
+      "type": "card",
+      "accent": "#ff6b6b",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "daily-pushups"
+        }
+      },
+      "child": {
+        "type": "row",
+        "gap": 12,
+        "children": [
+          {
+            "type": "icon",
+            "name": "💪",
+            "box": true
+          },
+          {
+            "type": "column",
+            "gap": 2,
+            "expand": true,
+            "children": [
+              {
+                "type": "text",
+                "style": "subtitle",
+                "value": "30 Push-ups Daily",
+                "maxLines": 1
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "0 / 30 push-ups today"
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "variant": "tonal",
+            "label": "+10",
+            "action": {
+              "type": "log_progress",
+              "params": {
+                "goalId": "daily-pushups",
+                "delta": 10
+              }
+            }
+          }
+        ]
+      }
+    },
+    "texts": [
+      "30 Push-ups Daily",
+      "0 / 30 push-ups today",
+      "+10"
+    ]
+  },
+  {
+    "name": "guitar:tile",
+    "tree": {
+      "type": "card",
+      "style": "tile",
+      "accent": "#ff6b6b",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "learn-guitar"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 6,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": 0.0,
+            "size": 56,
+            "stroke": 6,
+            "label": "🎸"
+          },
+          {
+            "type": "text",
+            "style": "caption",
+            "value": "0 / 5 sessions",
+            "maxLines": 1
+          }
+        ]
+      }
+    },
+    "texts": [
+      "0 / 5 sessions"
+    ]
+  },
+  {
+    "name": "guitar:tile_wide",
+    "tree": {
+      "type": "card",
+      "accent": "#ff6b6b",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "learn-guitar"
+        }
+      },
+      "child": {
+        "type": "row",
+        "gap": 12,
+        "children": [
+          {
+            "type": "icon",
+            "name": "🎸",
+            "box": true
+          },
+          {
+            "type": "column",
+            "gap": 2,
+            "expand": true,
+            "children": [
+              {
+                "type": "text",
+                "style": "subtitle",
+                "value": "Learn guitar",
+                "maxLines": 1
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "0 / 5 sessions sessions"
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "variant": "tonal",
+            "icon": "✓",
+            "label": "Log",
+            "action": {
+              "type": "log_progress",
+              "params": {
+                "goalId": "learn-guitar",
+                "delta": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    "texts": [
+      "Learn guitar",
+      "0 / 5 sessions sessions",
+      "Log"
+    ]
+  },
+  {
+    "name": "cs229-look:tile",
+    "tree": {
+      "type": "card",
+      "style": "tile",
+      "accent": "#e0573f",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "stanford-cs229"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 6,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": 0.0,
+            "size": 64,
+            "stroke": 7,
+            "label": "0%"
+          },
+          {
+            "type": "text",
+            "style": "caption",
+            "value": "Lecture 1: Introduction",
+            "maxLines": 1
+          }
+        ]
+      }
+    },
+    "texts": [
+      "Lecture 1: Introduction"
+    ]
+  },
+  {
+    "name": "cs229-look:tile_wide",
+    "tree": {
+      "type": "card",
+      "accent": "#e0573f",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "stanford-cs229"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 10,
+        "children": [
+          {
+            "type": "row",
+            "gap": 10,
+            "children": [
+              {
+                "type": "column",
+                "gap": 2,
+                "expand": true,
+                "children": [
+                  {
+                    "type": "text",
+                    "style": "subtitle",
+                    "value": "Stanford CS229: Machine Learning",
+                    "maxLines": 1
+                  },
+                  {
+                    "type": "text",
+                    "style": "caption",
+                    "value": "Lecture 1: Introduction",
+                    "maxLines": 1
+                  }
+                ]
+              },
+              {
+                "type": "stat",
+                "value": "0 days",
+                "label": "Streak"
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "variant": "filled",
+            "label": "▶ Watch on YouTube",
+            "full": true,
+            "action": {
+              "type": "open_video",
+              "params": {
+                "provider": "youtube",
+                "videoId": "jGwO_UgTS7I",
+                "startSec": 0,
+                "goalId": "stanford-cs229",
+                "itemId": "lec-01",
+                "embeddable": false
+              }
+            }
+          }
+        ]
+      }
+    },
+    "texts": [
+      "Stanford CS229: Machine Learning",
+      "Lecture 1: Introduction",
+      "0 days",
+      "Streak",
+      "▶ Watch on YouTube"
+    ]
+  },
+  {
+    "name": "water-look:tile",
+    "tree": {
+      "type": "card",
+      "style": "tile",
+      "accent": "#38bdf8",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "water"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 8,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": 0.0,
+            "size": 72,
+            "stroke": 8,
+            "label": 0,
+            "sublabel": "/ 8"
+          },
+          {
+            "type": "button",
+            "variant": "filled",
+            "label": "+1",
+            "action": {
+              "type": "log_progress",
+              "params": {
+                "goalId": "water",
+                "delta": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    "texts": [
+      "+1"
+    ]
+  },
+  {
+    "name": "water-look:tile_wide",
+    "tree": {
+      "type": "card",
+      "accent": "#38bdf8",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "water"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 8,
+        "children": [
+          {
+            "type": "row",
+            "align": "between",
+            "children": [
+              {
+                "type": "column",
+                "gap": 2,
+                "expand": true,
+                "children": [
+                  {
+                    "type": "text",
+                    "style": "subtitle",
+                    "value": "Drink water",
+                    "maxLines": 1
+                  },
+                  {
+                    "type": "text",
+                    "style": "caption",
+                    "value": "0 / 8 glasses"
+                  }
+                ]
+              },
+              {
+                "type": "stat",
+                "value": "0 days",
+                "label": "Streak"
+              }
+            ]
+          },
+          {
+            "type": "week_dots",
+            "days": [
+              {
+                "d": "M",
+                "s": ""
+              },
+              {
+                "d": "T",
+                "s": ""
+              },
+              {
+                "d": "W",
+                "s": "today"
+              },
+              {
+                "d": "T",
+                "s": ""
+              },
+              {
+                "d": "F",
+                "s": ""
+              },
+              {
+                "d": "S",
+                "s": ""
+              },
+              {
+                "d": "S",
+                "s": ""
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "texts": [
+      "Drink water",
+      "0 / 8 glasses",
+      "0 days",
+      "Streak"
+    ]
+  },
+  {
+    "name": "custom-example:tile",
+    "tree": {
+      "type": "card",
+      "style": "tile",
+      "accent": "#c084fc",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "spanish-practice"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 6,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": 0.0,
+            "size": 56,
+            "stroke": 6,
+            "label": "🗣️"
+          },
+          {
+            "type": "text",
+            "style": "caption",
+            "value": "0 / 4 sessions",
+            "maxLines": 1
+          }
+        ]
+      }
+    },
+    "texts": [
+      "0 / 4 sessions"
+    ]
+  },
+  {
+    "name": "custom-example:tile_wide",
+    "tree": {
+      "type": "card",
+      "accent": "#c084fc",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "spanish-practice"
+        }
+      },
+      "child": {
+        "type": "row",
+        "gap": 12,
+        "children": [
+          {
+            "type": "icon",
+            "name": "🗣️",
+            "box": true
+          },
+          {
+            "type": "column",
+            "gap": 2,
+            "expand": true,
+            "children": [
+              {
+                "type": "text",
+                "style": "subtitle",
+                "value": "Spanish practice",
+                "maxLines": 1
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "0 / 4 sessions this week"
+              }
+            ]
+          },
+          {
+            "type": "button",
+            "variant": "tonal",
+            "label": "Practice",
+            "action": {
+              "type": "open_external",
+              "params": {
+                "url": "https://www.duolingo.com/learn"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "texts": [
+      "Spanish practice",
+      "0 / 4 sessions this week",
+      "Practice"
+    ]
+  }
+]
