@@ -126,6 +126,16 @@ object NudgeEngine {
     private fun statsToday(ctx: Context) = statsSince(ctx, startOf(LocalDate.now()))
 
     /**
+     * Minutes on screen. "Visible" also counts time when the app's own dialog
+     * or sheet is in front, which "foreground" misses (Android 10+).
+     */
+    private fun minutesOf(s: android.app.usage.UsageStats?): Int {
+        s ?: return 0
+        val ms = if (Build.VERSION.SDK_INT >= 29) maxOf(s.totalTimeVisible, s.totalTimeInForeground) else s.totalTimeInForeground
+        return (ms / 60_000L).toInt()
+    }
+
+    /**
      * Today, this month and this year, in the user's time zone. Android keeps
      * older history in coarser buckets, so a month or year can include time
      * from before the app was installed.
@@ -142,7 +152,7 @@ object NudgeEngine {
     /** Minutes of foreground use today for each watched app. */
     fun usageToday(ctx: Context, apps: List<WatchedApp>): Map<String, Int> {
         val stats = statsToday(ctx)
-        return apps.associate { it.packageName to ((stats[it.packageName]?.totalTimeInForeground ?: 0L) / 60_000L).toInt() }
+        return apps.associate { it.packageName to minutesOf(stats[it.packageName]) }
     }
 
     /** Android's category of [pkg] as a word; "" when it has none or is hidden. */
@@ -175,7 +185,7 @@ object NudgeEngine {
         val pm = ctx.packageManager
         return statsSince(ctx, startMs).values.mapNotNull { s ->
             val pkg = s.packageName
-            val minutes = (s.totalTimeInForeground / 60_000L).toInt()
+            val minutes = minutesOf(s)
             if (pkg == ctx.packageName || pkg in config.excluded || minutes < 1) return@mapNotNull null
             val cat = category(ctx, pkg)
             if (cat !in Wording.distracting && pkg !in watched) return@mapNotNull null

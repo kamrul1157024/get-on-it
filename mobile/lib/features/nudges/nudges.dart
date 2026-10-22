@@ -128,6 +128,7 @@ class NudgeState {
     this.apps = const [],
     this.running = false,
     this.usageAccess = false,
+    this.statusKnown = false,
     this.pending = 0,
   });
 
@@ -137,6 +138,10 @@ class NudgeState {
   final List<WatchedApp> apps;
   final bool running;
   final bool usageAccess;
+
+  /// False until the phone has answered once; nothing about access shows
+  /// before that.
+  final bool statusKnown;
 
   /// Goals with work still open today; nudges point to the first.
   final int pending;
@@ -176,6 +181,7 @@ class NudgeController extends Notifier<NudgeState> {
       apps: apps,
       running: stateOrNull?.running ?? false,
       usageAccess: stateOrNull?.usageAccess ?? false,
+      statusKnown: stateOrNull?.statusKnown ?? false,
       pending: stateOrNull?.pending ?? 0,
     );
   }
@@ -234,6 +240,7 @@ class NudgeController extends Notifier<NudgeState> {
         apps: state.apps,
         running: st.running,
         usageAccess: st.usageAccess,
+        statusKnown: true,
         pending: (c['pending'] as List).length,
       );
     } on MissingPluginException {
@@ -251,6 +258,7 @@ class NudgeController extends Notifier<NudgeState> {
         apps: state.apps,
         running: st.running,
         usageAccess: st.usageAccess,
+        statusKnown: true,
         pending: state.pending,
       );
     } on MissingPluginException {

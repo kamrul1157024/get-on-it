@@ -54,6 +54,7 @@ class _TimeLostCardState extends ConsumerState<TimeLostCard> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    if (!ref.watch(nudgesProvider.select((s) => s.statusKnown))) return const SizedBox.shrink();
     if (!ref.watch(nudgesProvider.select((s) => s.usageAccess))) {
       return Card.outlined(
         key: const ValueKey('time-lost-setup'),
