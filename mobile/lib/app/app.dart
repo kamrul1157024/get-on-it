@@ -56,7 +56,7 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
     _updateChecked = true;
     var ctx = navigatorKey.currentContext;
     if (ctx == null) return;
-    await askForPermissionsOnce(ctx, ref);
+    await runFirstStartSetup(ctx, ref);
     ctx = navigatorKey.currentContext;
     if (ctx != null && ctx.mounted) await checkForUpdateOnStart(ctx, ref);
   }
@@ -108,6 +108,7 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
       if (widget.startReminders) ref.read(nudgesProvider.notifier).refreshStatus();
       // Time in other apps grew while this one was away.
       ref.invalidate(timeLostProvider);
+      ref.invalidate(overlayAllowedProvider);
     }
     // A change that waits for the automatic backup goes up now.
     if (state == AppLifecycleState.paused) ref.read(driveProvider.notifier).flush();

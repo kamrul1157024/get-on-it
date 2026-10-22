@@ -76,4 +76,33 @@ void main() {
     expect(couldHave(30, [lecture, page]), '15 pages of Atomic Habits');
     expect(couldHave(1, [lecture, page]), isNull);
   });
+
+  test('time bigger than a goal counts whole goals: the whole course, the rest of a book', () {
+    final course = equivalentsFor([view(sample('course-cs229'))]).single;
+    final items = (sample('course-cs229').data['items'] as List).cast<Map>();
+    final all = items.fold<num>(0, (s, i) => s + ((i['durationSec'] as num?) ?? 0)) / 60;
+    expect(course.wholeMinutes, closeTo(all, 0.01));
+    expect(course.whole, 'the whole course');
+    final threeTimes = (all * 3).ceil();
+    expect(couldHave(threeTimes, [course]), endsWith(', or the whole course 3 times'));
+    expect(couldHave(all.ceil(), [course]), endsWith(', or the whole course'));
+    expect(couldHave(80, [course]), '1 Stanford CS229 lecture');
+
+    final book = equivalentsFor([view(sample('book-atomic-habits'))]).single;
+    final pages = sample('book-atomic-habits').data['pages'] as Map;
+    expect(book.wholeMinutes, ((pages['end'] as num) - (pages['start'] as num) + 1) * 2);
+    expect(book.whole, 'the whole book');
+    final read = view(sample('book-atomic-habits'), state: {'lastPage': 100});
+    expect(equivalentsFor([read]).single.whole, 'the rest of the book');
+  });
+
+  test('the kinds of apps, for "On social and video apps"', () {
+    expect(appKinds(const [AppUsage('a', 'A', 'video', 1), AppUsage('b', 'B', 'social', 1)]), 'social and video apps');
+    expect(appKinds(const [AppUsage('a', 'A', 'game', 1)]), 'game apps');
+    expect(appKinds(const [AppUsage('a', 'A', '', 1)]), 'other apps');
+    expect(
+      appKinds(const [AppUsage('a', 'A', 'news', 1), AppUsage('b', 'B', 'social', 1), AppUsage('c', 'C', 'game', 1)]),
+      'social, game and news apps',
+    );
+  });
 }

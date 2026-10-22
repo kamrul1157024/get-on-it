@@ -301,44 +301,78 @@ Future<void> previewFlow(WidgetTester tester) async {
   await goBack(tester);
 }
 
-/// "Time lost today": with usage access, the Today screen shows the lost
-/// time, what it could have been, and lets an app be taken off the list. The
-/// nudge settings carry the goals' units and the exclusions to the phone.
+/// "Time lost": without usage access, a row that leads to it; with it, the
+/// first thing on the Today screen, compact with today, and one tap opens
+/// today, this month and this year with what that time could have been. An
+/// app can be taken off the list. The nudge settings carry the goals' units
+/// and the exclusions to the phone.
 Future<void> timeLostFlow(WidgetTester tester, Fakes fakes) async {
   final b = fakes.nudges;
-  b.usage = const [
-    AppUsage('com.instagram.android', 'Instagram', 'social', 95),
-    AppUsage('com.google.android.youtube', 'YouTube', 'video', 50),
-    AppUsage('com.king.candycrush', 'Candy Crush', 'game', 10),
-    AppUsage('com.example.news', 'News', 'news', 5),
-  ];
+  b.usage = const {
+    LostPeriod.today: [
+      AppUsage('com.instagram.android', 'Instagram', 'social', 95),
+      AppUsage('com.google.android.youtube', 'YouTube', 'video', 50),
+      AppUsage('com.king.candycrush', 'Candy Crush', 'game', 10),
+      AppUsage('com.example.news', 'News', 'news', 5),
+    ],
+    LostPeriod.month: [
+      AppUsage('com.instagram.android', 'Instagram', 'social', 1800),
+      AppUsage('com.google.android.youtube', 'YouTube', 'video', 1200),
+    ],
+    LostPeriod.year: [
+      AppUsage('com.instagram.android', 'Instagram', 'social', 3600),
+      AppUsage('com.google.android.youtube', 'YouTube', 'video', 2160),
+    ],
+  };
   await tapKey(tester, 'empty-samples');
-  // No usage access: no card.
+  // No usage access: one row that leads to it.
   expect(find.byKey(const ValueKey('time-lost')), findsNothing);
-
-  b.usageAccess = true;
+  await tapKey(tester, 'time-lost-setup');
+  expect(find.byKey(const ValueKey('usage-help')), findsOneWidget);
+  await tapKey(tester, 'usage-open-settings');
+  await tapKey(tester, 'usage-close');
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await waitFor(tester, find.byKey(const ValueKey('time-lost')));
-  expect(find.text('2 h 40 min'), findsOneWidget);
-  // The course is first: 160 min is 2 lectures of 75 min; the book 80 pages.
-  expect(find.text('That could have been 2 Stanford CS229 lectures, or 80 pages of Atomic Habits.'), findsOneWidget);
-  expect(find.text('1 h 35 min scrolling'), findsOneWidget);
-  expect(find.text('50 min watching'), findsOneWidget);
-  expect(find.byKey(const ValueKey('time-lost-app:com.example.news')), findsNothing, reason: 'top three only');
 
+  // Compact: today only.
+  expect(find.byKey(const ValueKey('time-lost-setup')), findsNothing);
+  expect(find.text('2 h 40 min'), findsOneWidget);
+  expect(find.byKey(const ValueKey('time-lost-periods')), findsNothing);
+  // The course is first: 160 min is 2 lectures of 75 min; the book 80 pages.
+  expect(
+    find.text(
+      'On social, video, game and news apps. '
+      'That could have been 2 Stanford CS229 lectures, or 80 pages of Atomic Habits.',
+    ),
+    findsOneWidget,
+  );
   final units = (b.last['equivalents'] as List).cast<Map>();
   expect(units.map((u) => u['plural']), ['Stanford CS229 lectures', 'pages of Atomic Habits']);
 
+  // One tap opens the periods; the year counts whole courses.
+  await tapKey(tester, 'time-lost-toggle');
+  expect(find.text('1 h 35 min scrolling'), findsOneWidget);
+  expect(find.byKey(const ValueKey('time-lost-app:com.example.news')), findsNothing, reason: 'top three only');
+  await tester.tap(find.text('This year'));
+  await settle(tester);
+  expect(find.text('96 h'), findsOneWidget);
+  final courseHours = (units.first['wholeMinutes'] as num) / 60;
+  final times = (96 * 60 / (courseHours * 60)).floor();
+  expect(find.textContaining('or the whole course $times times'), findsOneWidget);
+  expect(find.text('Counted by Android, including time before you installed Get On It.'), findsOneWidget);
+  await tester.tap(find.text('This month'));
+  await settle(tester);
+  expect(find.text('50 h'), findsOneWidget);
+
   // Take Instagram off the list, then undo.
   await tapKey(tester, 'time-lost-exclude:com.instagram.android');
-  await waitFor(tester, find.text('1 h 5 min'));
-  expect(find.byKey(const ValueKey('time-lost-app:com.instagram.android')), findsNothing);
+  await waitFor(tester, find.text('20 h'));
   expect(b.lastExcluded, ['com.instagram.android']);
   await waitFor(tester, find.text('Undo'));
   expect(b.last['excluded'], ['com.instagram.android']);
   await tester.tap(find.text('Undo'));
-  await waitFor(tester, find.text('2 h 40 min'));
+  await waitFor(tester, find.text('50 h'));
   expect(b.lastExcluded, isEmpty);
 }
 

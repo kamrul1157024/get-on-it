@@ -24,9 +24,14 @@ abstract class NudgeBridge {
 
   Future<List<({String package, String label})>> listApps();
 
-  /// Today's lost time per app, most first, without [excluded]; empty without
-  /// usage access.
-  Future<List<AppUsage>> usageToday(List<String> excluded);
+  /// Lost time per app for today, this month and this year, most first,
+  /// without [excluded]; empty without usage access.
+  Future<Map<LostPeriod, List<AppUsage>>> lostTime(List<String> excluded);
+
+  /// "Display over other apps", for the Push me hard stop screen.
+  Future<bool> canDrawOverlays();
+
+  Future<void> openOverlaySettings();
 }
 
 class ChannelNudgeBridge implements NudgeBridge {
@@ -55,21 +60,39 @@ class ChannelNudgeBridge implements NudgeBridge {
   }
 
   @override
-  Future<List<AppUsage>> usageToday(List<String> excluded) async {
-    final list = await systemChannel.invokeListMethod<Map>('usageToday', excluded) ?? const [];
-    return [
-      for (final m in list)
-        AppUsage(
-          m['package'] as String,
-          m['label'] as String,
-          m['category'] as String? ?? '',
-          (m['minutes'] as num).toInt(),
-        ),
-    ];
+  Future<Map<LostPeriod, List<AppUsage>>> lostTime(List<String> excluded) async {
+    final m = await systemChannel.invokeMapMethod<String, Object?>('lostTime', excluded) ?? const {};
+    return {
+      for (final p in LostPeriod.values)
+        p: [
+          for (final a in (m[p.name] as List? ?? const []).whereType<Map>())
+            AppUsage(
+              a['package'] as String,
+              a['label'] as String,
+              a['category'] as String? ?? '',
+              (a['minutes'] as num).toInt(),
+            ),
+        ],
+    };
   }
+
+  @override
+  Future<bool> canDrawOverlays() async => await systemChannel.invokeMethod<bool>('canDrawOverlays') ?? false;
+
+  @override
+  Future<void> openOverlaySettings() => systemChannel.invokeMethod('openOverlaySettings');
 }
 
 final nudgeBridgeProvider = Provider<NudgeBridge>((ref) => const ChannelNudgeBridge());
+
+/// "Display over other apps"; read again when the app comes back (app.dart).
+final overlayAllowedProvider = FutureProvider<bool>((ref) async {
+  try {
+    return await ref.read(nudgeBridgeProvider).canDrawOverlays();
+  } on MissingPluginException {
+    return false;
+  }
+});
 
 class WatchedApp {
   const WatchedApp(this.package, this.label, this.thresholdMin);
@@ -81,9 +104,26 @@ class WatchedApp {
   Map<String, Object?> toJson() => {'package': package, 'label': label, 'thresholdMin': thresholdMin};
 }
 
+/// How hard nudges push (android/.../nudge/NudgeRules.kt, Strength).
+enum NudgeStrength {
+  gentle('Gentle', '2 nudges a day, 3 h apart, a soft reminder.', 2, 180),
+  firm('Firm', '4 a day, 2 h apart, with the time you lost.', 4, 120),
+  hard('Push me hard', '12 a day, 20 min apart, and a stop screen over apps past their limit.', 12, 20);
+
+  const NudgeStrength(this.label, this.help, this.maxPerDay, this.minGapMin);
+
+  final String label;
+  final String help;
+  final int maxPerDay;
+  final int minGapMin;
+
+  static NudgeStrength parse(String? s) => values.where((v) => v.name == s).firstOrNull ?? firm;
+}
+
 class NudgeState {
   const NudgeState({
     this.enabled = false,
+    this.strength = NudgeStrength.firm,
     this.unlock = true,
     this.apps = const [],
     this.running = false,
@@ -92,6 +132,7 @@ class NudgeState {
   });
 
   final bool enabled;
+  final NudgeStrength strength;
   final bool unlock;
   final List<WatchedApp> apps;
   final bool running;
@@ -130,6 +171,7 @@ class NudgeController extends Notifier<NudgeState> {
     _schedule();
     return NudgeState(
       enabled: s['nudges.enabled'] == 'true',
+      strength: NudgeStrength.parse(s['nudges.strength']),
       unlock: s['nudges.unlock'] != 'false',
       apps: apps,
       running: stateOrNull?.running ?? false,
@@ -173,8 +215,7 @@ class NudgeController extends Notifier<NudgeState> {
       'apps': [for (final a in state.apps) a.toJson()],
       'quietStartMin': rules.quietStart,
       'quietEndMin': rules.quietEnd,
-      'maxPerDay': 4,
-      'minGapMin': 120,
+      'strength': state.strength.name,
       'pending': pending,
       'equivalents': [for (final e in await equivalents()) e.toJson()],
       'excluded': excludedApps(settings),
@@ -188,6 +229,7 @@ class NudgeController extends Notifier<NudgeState> {
       final st = await _bridge.status();
       state = NudgeState(
         enabled: state.enabled,
+        strength: state.strength,
         unlock: state.unlock,
         apps: state.apps,
         running: st.running,
@@ -204,6 +246,7 @@ class NudgeController extends Notifier<NudgeState> {
       final st = await _bridge.status();
       state = NudgeState(
         enabled: state.enabled,
+        strength: state.strength,
         unlock: state.unlock,
         apps: state.apps,
         running: st.running,
@@ -216,6 +259,8 @@ class NudgeController extends Notifier<NudgeState> {
   }
 
   Future<void> setEnabled(bool on) => ref.read(repositoryProvider).setSetting('nudges.enabled', '$on');
+
+  Future<void> setStrength(NudgeStrength s) => ref.read(repositoryProvider).setSetting('nudges.strength', s.name);
 
   Future<void> setUnlock(bool on) => ref.read(repositoryProvider).setSetting('nudges.unlock', '$on');
 

@@ -168,20 +168,29 @@ class FakeNudgeBridge implements NudgeBridge {
   @override
   Future<void> openAppDetails() async => appDetailsOpened++;
 
-  /// What the phone reports as lost time today.
-  var usage = <AppUsage>[];
+  /// What the phone reports as lost time, per period.
+  var usage = <LostPeriod, List<AppUsage>>{};
   List<String>? lastExcluded;
+  bool overlay = false;
 
   @override
-  Future<List<AppUsage>> usageToday(List<String> excluded) async {
+  Future<Map<LostPeriod, List<AppUsage>>> lostTime(List<String> excluded) async {
     lastExcluded = excluded;
-    return usageAccess
-        ? [
-            for (final u in usage)
-              if (!excluded.contains(u.package)) u,
-          ]
-        : const [];
+    if (!usageAccess) return const {};
+    return {
+      for (final e in usage.entries)
+        e.key: [
+          for (final u in e.value)
+            if (!excluded.contains(u.package)) u,
+        ],
+    };
   }
+
+  @override
+  Future<bool> canDrawOverlays() async => overlay;
+
+  @override
+  Future<void> openOverlaySettings() async => overlay = true;
 
   @override
   Future<List<({String package, String label})>> listApps() async => const [

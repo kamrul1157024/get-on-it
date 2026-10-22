@@ -56,21 +56,33 @@ class MainActivity : FlutterActivity() {
                     if (NudgeStore.config(this).enabled) NudgeService.start(this) else NudgeService.stop(this)
                     result.success(null)
                 }
-                // Lost time today for the Today card; the list stays on the phone.
-                "usageToday" -> {
+                // Lost time today, this month and this year for the Today card;
+                // it stays on the phone.
+                "lostTime" -> {
                     if (!hasUsageAccess()) {
-                        result.success(emptyList<Any>())
+                        result.success(emptyMap<String, Any>())
                     } else {
                         // The exclusions come with the call: the stored copy can lag a
                         // just-made change.
                         val excluded = (call.arguments as? List<*>)?.filterIsInstance<String>()?.toSet()
                         val config = NudgeStore.config(this).let { c -> excluded?.let { c.copy(excluded = it) } ?: c }
                         result.success(
-                            NudgeEngine.lostToday(this, config).map {
-                                mapOf("package" to it.packageName, "label" to it.label, "category" to it.category, "minutes" to it.minutes)
+                            NudgeEngine.periodStarts().mapValues { (_, start) ->
+                                NudgeEngine.lostSince(this, config, start).map {
+                                    mapOf("package" to it.packageName, "label" to it.label, "category" to it.category, "minutes" to it.minutes)
+                                }
                             },
                         )
                     }
+                }
+                // Push me hard: the stop screen needs "Display over other apps".
+                "canDrawOverlays" -> result.success(Settings.canDrawOverlays(this))
+                "openOverlaySettings" -> {
+                    startActivity(
+                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                    result.success(null)
                 }
                 "nudgeStatus" -> result.success(mapOf("running" to NudgeService.running, "usageAccess" to hasUsageAccess()))
                 "openUsageAccessSettings" -> {

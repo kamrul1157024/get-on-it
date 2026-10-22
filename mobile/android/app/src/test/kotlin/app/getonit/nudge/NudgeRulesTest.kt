@@ -118,4 +118,64 @@ class NudgeRulesTest {
         // The limits still hold.
         assertNull(decide(c = c, trigger = Trigger.Unlock(45), minute = 23 * 60 + 30).first)
     }
+
+    @Test fun eachStrengthHasItsLimits() {
+        val gentle = base.copy(strength = Strength.GENTLE)
+        val (_, g1) = decide(c = gentle)
+        assertNull("3 h between gentle nudges", decide(c = gentle, h = g1, nowMs = t0 + 150 * 60_000L).first)
+        assertNotNull(decide(c = gentle, h = g1, nowMs = t0 + 181 * 60_000L).first)
+        assertNull("2 a day", decide(c = gentle, h = g1.copy(count = 2), nowMs = t0 + 600 * 60_000L).first)
+
+        val hard = base.copy(strength = Strength.HARD)
+        val (_, h1) = decide(c = hard)
+        assertNull("20 min between hard nudges", decide(c = hard, h = h1, nowMs = t0 + 19 * 60_000L).first)
+        assertNotNull(decide(c = hard, h = h1, nowMs = t0 + 21 * 60_000L).first)
+        assertNotNull(decide(c = hard, h = h1.copy(count = 11), nowMs = t0 + 30 * 60_000L).first)
+        assertNull("12 a day", decide(c = hard, h = h1.copy(count = 12), nowMs = t0 + 30 * 60_000L).first)
+        assertEquals(Strength.FIRM, Strength.parse(null))
+        assertEquals(Strength.FIRM, Strength.parse("firm"))
+    }
+
+    @Test fun theToneFollowsTheStrength() {
+        val social = insta.copy(category = "social")
+        val units = listOf(lecture)
+        val gentle = decide(c = base.copy(strength = Strength.GENTLE, equivalents = units), trigger = Trigger.Usage(social, 80)).first!!
+        assertEquals("Ready for your goal?", gentle.title)
+        assertEquals("1 h 20 min on Instagram so far. Read Atomic Habits is waiting.", gentle.body)
+        assertEquals(false, gentle.stopScreen)
+
+        val firm = decide(c = base.copy(equivalents = units), trigger = Trigger.Usage(social, 45)).first!!
+        assertEquals("45 min scrolling Instagram today", firm.title)
+        assertEquals(false, firm.stopScreen)
+
+        val hard = decide(c = base.copy(strength = Strength.HARD, equivalents = units), trigger = Trigger.Usage(social, 160)).first!!
+        assertEquals("2 h 40 min burned on Instagram", hard.title)
+        assertEquals("That was 2 CS229 lectures. Close it. Do the thing.", hard.body)
+        assertEquals(true, hard.stopScreen)
+        assertEquals("com.instagram.android", hard.app!!.packageName)
+
+        // Gentle unlock nudges do not mention lost time; hard ones are blunt.
+        assertEquals("Read p. 45–46 · ≈ 4 min", decide(c = base.copy(strength = Strength.GENTLE), trigger = Trigger.Unlock(90)).first!!.body)
+        assertEquals(
+            "1 h 30 min lost today. That is 1 CS229 lecture. Close it and do the thing. Read p. 45–46 · ≈ 4 min",
+            decide(c = base.copy(strength = Strength.HARD, equivalents = units), trigger = Trigger.Unlock(90)).first!!.body,
+        )
+    }
+
+    @Test fun aBreakPausesNudgesForAnHour() {
+        val paused = NudgeHistory().breakFor(t0, "2026-10-21")
+        assertNull(decide(h = paused, nowMs = t0 + 59 * 60_000L).first)
+        assertNotNull(decide(h = paused, nowMs = t0 + 61 * 60_000L).first)
+        // Every level, and quiet hours and done work still stop nudges.
+        assertNull(decide(c = base.copy(strength = Strength.HARD), h = paused, nowMs = t0 + 30 * 60_000L).first)
+        assertNull(decide(c = base.copy(strength = Strength.HARD), minute = 23 * 60 + 30).first)
+        assertNull(decide(c = base.copy(strength = Strength.HARD, pending = emptyList())).first)
+    }
+
+    @Test fun timeBiggerThanAGoalCountsWholeGoals() {
+        val course = Equivalent(75.0, "CS229 lecture", "CS229 lectures", wholeMinutes = 1900.0, whole = "the whole course")
+        assertEquals("1 CS229 lecture", Wording.couldHave(80, listOf(course)))
+        assertEquals("25 CS229 lectures, or the whole course", Wording.couldHave(1900, listOf(course)))
+        assertEquals("76 CS229 lectures, or the whole course 3 times", Wording.couldHave(5760, listOf(course)))
+    }
 }
