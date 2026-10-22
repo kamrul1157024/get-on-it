@@ -145,7 +145,7 @@ class _TimeLostCardState extends ConsumerState<TimeLostCard> {
                   ),
                 if (period != LostPeriod.today)
                   Text(
-                    'Counted by Android, including time before you installed Get On It.',
+                    'Counted by Android, including time before you installed Get On It. For older weeks it can be a little lower than your real use.',
                     style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                   ),
               ],

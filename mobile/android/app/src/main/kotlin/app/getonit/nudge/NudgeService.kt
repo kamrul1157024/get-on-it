@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -116,24 +117,75 @@ object NudgeEngine {
         return nudge
     }
 
-    private fun statsSince(ctx: Context, startMs: Long): Map<String, android.app.usage.UsageStats> {
-        val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return emptyMap()
-        return usm.queryAndAggregateUsageStats(startMs, System.currentTimeMillis())
-    }
-
     private fun startOf(date: LocalDate): Long = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    private fun statsToday(ctx: Context) = statsSince(ctx, startOf(LocalDate.now()))
+    private fun midnight(): Long = startOf(LocalDate.now(ZoneId.systemDefault()))
 
     /**
-     * Minutes on screen. "Visible" also counts time when the app's own dialog
-     * or sheet is in front, which "foreground" misses (Android 10+).
+     * Visible time per app since local midnight, from app events. Events from
+     * 3 hours before midnight catch a session that started yesterday; the
+     * math cuts it at midnight.
      */
-    private fun minutesOf(s: android.app.usage.UsageStats?): Int {
-        s ?: return 0
-        val ms = if (Build.VERSION.SDK_INT >= 29) maxOf(s.totalTimeVisible, s.totalTimeInForeground) else s.totalTimeInForeground
-        return (ms / 60_000L).toInt()
+    private fun todayMs(ctx: Context): Map<String, Long> {
+        val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return emptyMap()
+        val from = midnight()
+        val windowStart = from - 3 * 3_600_000L
+        val now = System.currentTimeMillis()
+        val raw = usm.queryEvents(windowStart, now)
+        val e = UsageEvents.Event()
+        val events = mutableListOf<UsageEvent>()
+        while (raw.hasNextEvent()) {
+            raw.getNextEvent(e)
+            val kind = if (Build.VERSION.SDK_INT >= 29) {
+                when (e.eventType) {
+                    UsageEvents.Event.ACTIVITY_RESUMED -> UsageEvent.Kind.RESUMED
+                    UsageEvents.Event.ACTIVITY_STOPPED -> UsageEvent.Kind.STOPPED
+                    UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.DEVICE_SHUTDOWN -> UsageEvent.Kind.ALL_HIDDEN
+                    else -> null
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                when (e.eventType) {
+                    UsageEvents.Event.MOVE_TO_FOREGROUND -> UsageEvent.Kind.RESUMED
+                    UsageEvents.Event.MOVE_TO_BACKGROUND -> UsageEvent.Kind.STOPPED
+                    UsageEvents.Event.SCREEN_NON_INTERACTIVE -> UsageEvent.Kind.ALL_HIDDEN
+                    else -> null
+                }
+            } ?: continue
+            events += UsageEvent(e.packageName ?: "", e.className ?: "", e.timeStamp, kind)
+        }
+        return UsageMath.visibleMs(events, from, now, windowStartMs = windowStart)
     }
+
+    /**
+     * Time per app since [startMs]: whole stored buckets that lie inside
+     * [startMs, midnight), plus today from events. Never a bucket that
+     * reaches past either edge.
+     */
+    private fun msSince(ctx: Context, startMs: Long): Map<String, Long> {
+        val today = todayMs(ctx)
+        val until = midnight()
+        if (startMs >= until) return today
+        val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return today
+        val buckets = mutableListOf<UsageBucket>()
+        for (interval in listOf(UsageStatsManager.INTERVAL_YEARLY, UsageStatsManager.INTERVAL_MONTHLY, UsageStatsManager.INTERVAL_WEEKLY, UsageStatsManager.INTERVAL_DAILY)) {
+            usm.queryUsageStats(interval, startMs, until)
+                .groupBy { it.firstTimeStamp to it.lastTimeStamp }
+                .forEach { (range, stats) ->
+                    buckets += UsageBucket(range.first, range.second, stats.associate { it.packageName to visibleOf(it) })
+                }
+        }
+        return UsageMath.sum(UsageMath.bucketMs(buckets, startMs, until), today)
+    }
+
+    /**
+     * Time on screen in one bucket. "Visible" also counts time when the app's
+     * own dialog or sheet is in front, which "foreground" misses (Android 10+).
+     */
+    private fun visibleOf(s: android.app.usage.UsageStats): Long =
+        if (Build.VERSION.SDK_INT >= 29) maxOf(s.totalTimeVisible, s.totalTimeInForeground) else s.totalTimeInForeground
+
+    private fun minutes(ms: Long?): Int = ((ms ?: 0L) / 60_000L).toInt()
 
     /**
      * Today, this month and this year, in the user's time zone. Android keeps
@@ -151,8 +203,8 @@ object NudgeEngine {
 
     /** Minutes of foreground use today for each watched app. */
     fun usageToday(ctx: Context, apps: List<WatchedApp>): Map<String, Int> {
-        val stats = statsToday(ctx)
-        return apps.associate { it.packageName to minutesOf(stats[it.packageName]) }
+        val today = todayMs(ctx)
+        return apps.associate { it.packageName to minutes(today[it.packageName]) }
     }
 
     /** Android's category of [pkg] as a word; "" when it has none or is hidden. */
@@ -178,14 +230,13 @@ object NudgeEngine {
      * watched ones, without the ones the user took off the list. It stays on
      * the phone.
      */
-    fun lostToday(ctx: Context, config: NudgeConfig): List<AppUsage> = lostSince(ctx, config, startOf(LocalDate.now()))
+    fun lostToday(ctx: Context, config: NudgeConfig): List<AppUsage> = lostSince(ctx, config, midnight())
 
     fun lostSince(ctx: Context, config: NudgeConfig, startMs: Long): List<AppUsage> {
         val watched = config.apps.associateBy { it.packageName }
         val pm = ctx.packageManager
-        return statsSince(ctx, startMs).values.mapNotNull { s ->
-            val pkg = s.packageName
-            val minutes = minutesOf(s)
+        return msSince(ctx, startMs).mapNotNull { (pkg, ms) ->
+            val minutes = minutes(ms)
             if (pkg == ctx.packageName || pkg in config.excluded || minutes < 1) return@mapNotNull null
             val cat = category(ctx, pkg)
             if (cat !in Wording.distracting && pkg !in watched) return@mapNotNull null
