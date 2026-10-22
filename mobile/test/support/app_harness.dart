@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:getonit/features/permissions/permission_prompt.dart';
 import 'package:getonit/features/update/update_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -161,6 +162,11 @@ class FakeNudgeBridge implements NudgeBridge {
   @override
   Future<void> openUsageAccessSettings() async => usageAccess = true;
 
+  int appDetailsOpened = 0;
+
+  @override
+  Future<void> openAppDetails() async => appDetailsOpened++;
+
   @override
   Future<List<({String package, String label})>> listApps() async => const [
     (package: 'com.android.chrome', label: 'Chrome'),
@@ -191,6 +197,9 @@ class Fakes {
   final widgets = FakeWidgetBridge();
   late final driveAccount = FakeDriveAccount(drive);
   final updates = FakeUpdates();
+
+  /// The first-start permission popup. Off unless a test is about it.
+  bool permissionPrompt = false;
 
   FakeVideo get video => videos.last;
 }
@@ -229,10 +238,12 @@ Widget buildTestApp({
     databaseProvider.overrideWithValue(db),
     if (clock != null) wallClockProvider.overrideWithValue(clock.call),
     if (pdfPicker != null) pdfPickerProvider.overrideWithValue(pdfPicker),
+    if (fakes == null) permissionPromptEnabledProvider.overrideWith((ref) => false),
     if (fakes != null) ...[
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       installedVersionProvider.overrideWith((ref) => fakes.updates.version),
+      permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
       httpClientProvider.overrideWithValue(fakes.updates.client),
       apkInstallerProvider.overrideWithValue(fakes.updates),
       reminderGatewayProvider.overrideWithValue(fakes.notifications),
