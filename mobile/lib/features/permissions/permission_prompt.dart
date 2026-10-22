@@ -14,6 +14,7 @@ class AppPermission {
     required this.why,
     required this.granted,
     required this.request,
+    this.applies,
   });
 
   /// Stored once the popup has shown it; never renamed.
@@ -24,6 +25,9 @@ class AppPermission {
 
   /// Asks for it: a system dialog, or a settings page with help first.
   final Future<void> Function(BuildContext context) request;
+
+  /// Whether the user needs it, from the settings; always when null.
+  final bool Function(Map<String, String> settings)? applies;
 }
 
 final appPermissionsProvider = Provider<List<AppPermission>>((ref) {
@@ -58,6 +62,14 @@ final appPermissionsProvider = Provider<List<AppPermission>>((ref) {
       granted: () async => (await nudges.status()).usageAccess,
       request: (context) => showUsageAccessHelp(context, nudges),
     ),
+    AppPermission(
+      id: 'overlay',
+      title: 'Display over other apps',
+      why: 'The stop screen over an app you spend too long in.',
+      granted: nudges.canDrawOverlays,
+      request: (context) => showOverlayHelp(context, nudges),
+      applies: (s) => NudgeStrength.parse(s['nudges.strength']) == NudgeStrength.hard,
+    ),
   ];
 });
 
@@ -65,6 +77,66 @@ final appPermissionsProvider = Provider<List<AppPermission>>((ref) {
 final permissionPromptEnabledProvider = Provider<bool>((ref) => true);
 
 const _shownKey = 'permissions.shown';
+const _strengthAskedKey = 'setup.strengthAsked';
+
+/// First start: how hard to push, then the permissions it needs.
+Future<void> runFirstStartSetup(BuildContext context, WidgetRef ref) async {
+  await askStrengthOnce(context, ref);
+  if (context.mounted) await askForPermissionsOnce(context, ref);
+}
+
+/// Asks once how hard nudges should push. Closing without a choice keeps
+/// Firm; Settings can change it later.
+Future<void> askStrengthOnce(BuildContext context, WidgetRef ref) async {
+  if (!ref.read(permissionPromptEnabledProvider)) return;
+  final repo = ref.read(repositoryProvider);
+  final settings = await repo.settings();
+  if (settings[_strengthAskedKey] == 'true' || !context.mounted) return;
+  final chosen = await showDialog<NudgeStrength>(context: context, builder: (_) => const StrengthChoice());
+  await repo.setSetting('nudges.strength', (chosen ?? NudgeStrength.firm).name);
+  await repo.setSetting(_strengthAskedKey, 'true');
+}
+
+class StrengthChoice extends StatefulWidget {
+  const StrengthChoice({super.key});
+
+  @override
+  State<StrengthChoice> createState() => _StrengthChoiceState();
+}
+
+class _StrengthChoiceState extends State<StrengthChoice> {
+  NudgeStrength _value = NudgeStrength.firm;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    key: const ValueKey('strength-choice'),
+    title: const Text('How hard should Get On It push you?'),
+    content: RadioGroup<NudgeStrength>(
+      groupValue: _value,
+      onChanged: (v) => setState(() => _value = v ?? _value),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final v in NudgeStrength.values)
+            RadioListTile<NudgeStrength>(
+              key: ValueKey('strength:${v.name}'),
+              contentPadding: EdgeInsets.zero,
+              value: v,
+              title: Text(v.label),
+              subtitle: Text(v.help),
+            ),
+        ],
+      ),
+    ),
+    actions: [
+      FilledButton(
+        key: const ValueKey('strength-continue'),
+        onPressed: () => Navigator.pop(context, _value),
+        child: const Text('Continue'),
+      ),
+    ],
+  );
+}
 
 /// Asks once for the permissions that are missing. A permission the popup
 /// has shown is never asked for again, allowed or not; a permission added in
@@ -72,10 +144,11 @@ const _shownKey = 'permissions.shown';
 Future<void> askForPermissionsOnce(BuildContext context, WidgetRef ref) async {
   if (!ref.read(permissionPromptEnabledProvider)) return;
   final repo = ref.read(repositoryProvider);
-  final shown = ((await repo.settings())[_shownKey] ?? '').split(',').where((s) => s.isNotEmpty).toSet();
+  final settings = await repo.settings();
+  final shown = (settings[_shownKey] ?? '').split(',').where((s) => s.isNotEmpty).toSet();
   final missing = <AppPermission>[];
   for (final p in ref.read(appPermissionsProvider)) {
-    if (shown.contains(p.id)) continue;
+    if (shown.contains(p.id) || !(p.applies?.call(settings) ?? true)) continue;
     try {
       if (!await p.granted()) missing.add(p);
     } catch (_) {

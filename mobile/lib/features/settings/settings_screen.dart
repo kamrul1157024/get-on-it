@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../nudges/usage_access_help.dart';
+import '../nudges/wasted_time.dart';
 import '../update/update_dialog.dart';
 import '../../app/providers.dart';
 import '../../core/schema/capabilities.dart';
@@ -390,12 +391,54 @@ class _NudgesSection extends ConsumerWidget {
           ),
         ),
         if (s.enabled) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: SegmentedButton<NudgeStrength>(
+              key: const ValueKey('nudges-strength'),
+              showSelectedIcon: false,
+              segments: [
+                for (final v in NudgeStrength.values)
+                  ButtonSegment(value: v, label: Text(v == NudgeStrength.hard ? 'Hard' : v.label)),
+              ],
+              selected: {s.strength},
+              onSelectionChanged: (v) => c.setStrength(v.first),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text(s.strength.help, key: const ValueKey('nudges-strength-help'), style: t.bodySmall),
+          ),
+          if (s.strength == NudgeStrength.hard)
+            Consumer(
+              builder: (context, ref, _) {
+                final ok = ref.watch(overlayAllowedProvider).value ?? false;
+                return ListTile(
+                  key: const ValueKey('nudges-overlay'),
+                  leading: Icon(
+                    ok ? Icons.check_circle : Icons.error_outline,
+                    color: ok ? Colors.green : Colors.orange,
+                  ),
+                  title: const Text('Display over other apps'),
+                  subtitle: const Text(
+                    'For the stop screen. Without it, a notification stays until you leave the app.',
+                  ),
+                  trailing: ok
+                      ? null
+                      : TextButton(
+                          onPressed: () => showOverlayHelp(context, ref.read(nudgeBridgeProvider)),
+                          child: const Text('Allow'),
+                        ),
+                );
+              },
+            ),
           SwitchListTile(
             key: const ValueKey('nudges-unlock'),
             value: s.unlock,
             onChanged: c.setUnlock,
             title: const Text('When I unlock the phone'),
-            subtitle: const Text('At most one nudge every 2 hours, and 4 a day.'),
+            subtitle: Text(
+              'At most one nudge every ${formatDuration(s.strength.minGapMin)}, and ${s.strength.maxPerDay} a day.',
+            ),
           ),
           ListTile(
             key: const ValueKey('nudges-usage-access'),

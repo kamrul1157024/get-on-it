@@ -83,6 +83,10 @@ void main() {
     await run(tester, (_) => previewFlow(tester));
   });
 
+  testWidgets('time lost today: card, what it could have been, exclude and undo', (tester) async {
+    await run(tester, (f) => timeLostFlow(tester, f), clock: TestClock(DateTime(2026, 10, 21, 9)));
+  });
+
   testWidgets('invalid plan shows errors', (tester) async {
     await run(tester, (_) => invalidPlanFlow(tester));
   });

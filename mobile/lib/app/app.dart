@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/nudges/time_lost_card.dart';
 import '../features/permissions/permission_prompt.dart';
 import '../features/update/update_dialog.dart';
 import '../features/drive/drive_controller.dart';
@@ -55,7 +56,7 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
     _updateChecked = true;
     var ctx = navigatorKey.currentContext;
     if (ctx == null) return;
-    await askForPermissionsOnce(ctx, ref);
+    await runFirstStartSetup(ctx, ref);
     ctx = navigatorKey.currentContext;
     if (ctx != null && ctx.mounted) await checkForUpdateOnStart(ctx, ref);
   }
@@ -105,6 +106,9 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
       // The user may have changed a permission in system settings.
       if (_remindersStarted) ref.read(remindersProvider.notifier).refreshPermissions();
       if (widget.startReminders) ref.read(nudgesProvider.notifier).refreshStatus();
+      // Time in other apps grew while this one was away.
+      ref.invalidate(timeLostProvider);
+      ref.invalidate(overlayAllowedProvider);
     }
     // A change that waits for the automatic backup goes up now.
     if (state == AppLifecycleState.paused) ref.read(driveProvider.notifier).flush();

@@ -61,3 +61,28 @@ Future<void> showUsageAccessHelp(BuildContext context, NudgeBridge bridge) => sh
     );
   },
 );
+
+/// Guides the user to "Display over other apps" for the Push me hard stop
+/// screen. Android 13+ can restrict it for an app from a downloaded APK, the
+/// same way as usage access.
+Future<void> showOverlayHelp(BuildContext context, NudgeBridge bridge) => showDialog<void>(
+  context: context,
+  builder: (ctx) => AlertDialog(
+    key: const ValueKey('overlay-help'),
+    title: const Text('Allow the stop screen'),
+    content: const Text(
+      'Open "Display over other apps" and turn on the switch for Get On It. '
+      'If Android says the setting is restricted: open App info, tap ⋮, then "Allow restricted settings", '
+      'and try again.\n\nGet On It uses it only to show the stop screen over an app past its limit.',
+    ),
+    actions: [
+      TextButton(key: const ValueKey('overlay-close'), onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+      TextButton(onPressed: bridge.openAppDetails, child: const Text('Open App info')),
+      FilledButton(
+        key: const ValueKey('overlay-open-settings'),
+        onPressed: bridge.openOverlaySettings,
+        child: const Text('Open setting'),
+      ),
+    ],
+  ),
+);

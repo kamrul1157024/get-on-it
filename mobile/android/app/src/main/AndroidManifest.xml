@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Reminders and alarms (spec §11.6). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Push me hard: the stop screen over a watched app (optional). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
@@ -92,6 +94,14 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Reminds the user of their own goal when they unlock the phone or spend more time than they chose in other apps." />
         </service>
+        <receiver android:exported="false" android:name=".nudge.NudgeBreakReceiver"/>
+        <activity
+            android:name=".nudge.StopActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="app.getonit.stop"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
         <receiver android:exported="false" android:name=".nudge.NudgeBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
