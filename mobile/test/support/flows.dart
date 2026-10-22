@@ -193,6 +193,86 @@ Future<void> invalidPlanFlow(WidgetTester tester) async {
   await goBack(tester);
 }
 
+/// A template-only bundle around [screen], for preview checks.
+String _bundle(Map<String, Object?> screen) => jsonEncode({
+  'kind': 'bundle',
+  'schemaVersion': '1.0',
+  'documents': [
+    {
+      'kind': 'template',
+      'id': 'probe',
+      'version': '1.0.0',
+      'engine': 'count',
+      'surfaces': {'screen': screen},
+    },
+    {
+      'kind': 'goal',
+      'id': 'probe-goal',
+      'template': 'probe@1',
+      'title': 'Probe',
+      'data': {'unit': 'reps', 'target': 3},
+    },
+  ],
+});
+
+/// The import preview draws the real screen and both widgets, blocks a plan
+/// whose layout fails, and copies a fix prompt for it and for warnings.
+Future<void> previewFlow(WidgetTester tester) async {
+  await pastePlan(tester, await rootBundle.loadString('assets/prompt/custom_example.json'));
+  await settle(tester);
+  final preview = find.byKey(const ValueKey('surface-preview:spanish-practice:screen'));
+  expect(find.descendant(of: preview, matching: find.text('Start a session')), findsOneWidget);
+  expect(find.byKey(const ValueKey('fix-with-ai')), findsNothing);
+  await tester.tap(find.text('Small'));
+  await settle(tester);
+  expect(
+    find.descendant(
+      of: find.byKey(const ValueKey('surface-preview:spanish-practice:tile')),
+      matching: find.text('0 / 4 sessions'),
+    ),
+    findsOneWidget,
+  );
+  expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNotNull);
+  await goBack(tester);
+
+  // A heatmap inside a grid cannot be measured: the layout fails. Flutter
+  // reports each failure; count them instead of failing the test on them.
+  final report = FlutterError.onError;
+  var layoutErrors = 0;
+  FlutterError.onError = (_) => layoutErrors++;
+  try {
+    await pastePlan(
+      tester,
+      _bundle({
+        'type': 'grid',
+        'children': [
+          {'type': 'heatmap', 'cells': '{{state.heatmap}}'},
+        ],
+      }),
+    );
+    await settle(tester);
+    expect(find.byKey(const ValueKey('surface-broken:probe-goal:screen')), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNull);
+    expect(find.text('Fix with AI'), findsOneWidget);
+    await tapKey(tester, 'fix-copy');
+    final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+    expect(copied, contains('screen: the goal screen failed to lay out'));
+    expect(copied, contains('"id":"probe"'));
+    await goBack(tester);
+  } finally {
+    FlutterError.onError = report;
+  }
+  expect(layoutErrors, greaterThan(0));
+
+  // A wrong binding is a warning: import still works, fixing is optional.
+  await pastePlan(tester, _bundle({'type': 'text', 'value': '{{state.nope}}'}));
+  await settle(tester);
+  expect(find.textContaining('the "count" engine has no "nope"'), findsWidgets);
+  expect(find.text('Fix the warnings with AI (optional)'), findsOneWidget);
+  expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNotNull);
+  await goBack(tester);
+}
+
 // ---------------------------------------------------------------------------
 // Every remaining interaction. `fakes` is the harness's record of what the app
 // did outside itself (player, external links).
@@ -371,9 +451,11 @@ Future<void> clipboardFlow(WidgetTester tester) async {
     tester,
     '{"kind":"goal","schemaVersion":"1.0","id":"x","template":"course@1","title":"T","data":{"items":[]}}',
   );
-  await tapText(tester, 'Copy for Claude');
-  final copied = await Clipboard.getData(Clipboard.kTextPlain);
-  expect(copied?.text, contains('data.items'));
+  await tapKey(tester, 'fix-copy');
+  final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+  expect(copied, contains('You fix plans'));
+  expect(copied, contains('data.items'));
+  expect(copied, contains('"id":"x"'));
   await goBack(tester);
 }
 

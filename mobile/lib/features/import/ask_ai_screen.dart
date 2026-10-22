@@ -43,6 +43,20 @@ String fillEditPrompt({
       request.trim().isEmpty ? 'Look at my progress and suggest a better plan.' : request.trim(),
     );
 
+/// Fills the fix prompt (assets/prompt/fix_prompt.md): the problems the app
+/// found and the answer that has them.
+String fillFixPrompt({
+  required String template,
+  required String uiReference,
+  required List<String> problems,
+  required String answer,
+  required DateTime today,
+}) => template
+    .replaceAll('{{uiReference}}', uiReference.trim())
+    .replaceAll('{{problems}}', [for (final p in problems) '- $p'].join('\n'))
+    .replaceAll('{{today}}', DateFormat('yyyy-MM-dd (EEEE)').format(today))
+    .replaceAll('{{answer}}', answer.trim());
+
 /// A few lines the AI needs to change a plan well: where the user is, the
 /// pace, and which items are already done (their ids must stay).
 String progressSummary(GoalView view) {

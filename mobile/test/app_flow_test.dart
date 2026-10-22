@@ -30,8 +30,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  Future<void> run(WidgetTester tester, Future<void> Function(Fakes) flow) async {
-    final fakes = await start(tester);
+  Future<void> run(WidgetTester tester, Future<void> Function(Fakes) flow, {TestClock? clock}) async {
+    final fakes = await start(tester, clock: clock);
     expect(find.text('No goals yet'), findsOneWidget);
     await flow(fakes);
     await stop(tester);
@@ -70,6 +70,10 @@ void main() {
 
   testWidgets('import: paste button and copy errors for Claude', (tester) async {
     await run(tester, (_) => clipboardFlow(tester));
+  });
+
+  testWidgets('import preview: real surfaces, broken layout blocks, fix with AI', (tester) async {
+    await run(tester, (_) => previewFlow(tester));
   });
 
   testWidgets('invalid plan shows errors', (tester) async {
@@ -118,6 +122,8 @@ void main() {
           await settle(tester);
         },
       ),
+      // The sample plans skip some weekdays; a fixed Wednesday keeps all four open.
+      clock: TestClock(DateTime(2026, 10, 21, 9)),
     );
   });
 

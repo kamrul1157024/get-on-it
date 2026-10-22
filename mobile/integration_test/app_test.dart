@@ -53,8 +53,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  Future<void> run(WidgetTester tester, Future<void> Function(Fakes) flow) async {
-    final fakes = await start(tester);
+  Future<void> run(WidgetTester tester, Future<void> Function(Fakes) flow, {TestClock? clock}) async {
+    final fakes = await start(tester, clock: clock);
     await flow(fakes);
     await stop(tester);
   }
@@ -167,6 +167,8 @@ void main() {
           await settle(tester);
         },
       ),
+      // The sample plans skip some weekdays; a fixed Wednesday keeps all four open.
+      clock: TestClock(DateTime(2026, 10, 21, 9)),
     );
   });
 

@@ -132,3 +132,28 @@ final goalViewProvider = Provider.family<GoalView?, String>((ref, goalId) {
         );
   return GoalView(goal: stored.doc, template: template, state: state, createdAt: stored.createdAt);
 });
+
+/// The state a goal would have, before it is saved: for the import preview
+/// and its checks.
+Map<String, Object?> previewState(
+  TemplateDoc template,
+  GoalDoc goal, {
+  required DayClock clock,
+  required DateTime now,
+  List<GoalEvent> events = const [],
+  DateTime? createdAt,
+  Map<String, String> files = const {},
+}) {
+  final engine = engineRegistry.forGoal(template, goal);
+  if (engine == null) return const {};
+  return engine.computeState(
+    EngineContext(
+      goal: goal,
+      events: events,
+      now: Now.of(now),
+      clock: clock,
+      importedDay: clock.dayOfDateTime(createdAt ?? now),
+      linkedFiles: files,
+    ),
+  );
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:getonit/render/layout_guard.dart';
 import 'package:getonit/render/renderer.dart';
 
 void main() {
@@ -183,5 +184,48 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('+10'), findsOneWidget);
     expect(find.text('cell'), findsOneWidget);
+  });
+
+  testWidgets('a card that fails to lay out takes only itself down', (tester) async {
+    final report = FlutterError.onError;
+    var errors = 0;
+    FlutterError.onError = (_) => errors++;
+    try {
+      await render(tester, {
+        'type': 'column',
+        'children': [
+          {
+            'type': 'card',
+            'child': {
+              'type': 'grid',
+              'children': [
+                {
+                  'type': 'heatmap',
+                  'cells': [
+                    {'level': 1},
+                  ],
+                },
+              ],
+            },
+          },
+          {
+            'type': 'card',
+            'child': {
+              'type': 'button',
+              'label': 'Still here',
+              'action': {'type': 'notify'},
+            },
+          },
+        ],
+      }, const {});
+      await tester.pump();
+      await tester.tap(find.text('Still here'));
+    } finally {
+      FlutterError.onError = report;
+    }
+    expect(errors, greaterThan(0));
+    expect(dispatched.single['type'], 'notify');
+    final guards = tester.renderObjectList<RenderLayoutGuard>(find.byType(LayoutGuard)).toList();
+    expect(guards.map((g) => g.failed), [true, false]);
   });
 }

@@ -20,7 +20,7 @@ void main() {
   final today = DateTime(2026, 10, 21);
   // Bindings like {{state.count}} belong in the prompt; fill-in slots do not.
   final placeholder = RegExp(
-    r'\{\{(today|request|example|customExample|uiReference|goal|progress|currentTemplate)\}\}',
+    r'\{\{(today|request|example|customExample|uiReference|goal|progress|currentTemplate|problems|answer)\}\}',
   );
   final uiReference = File('assets/prompt/ui_reference.md').readAsStringSync();
 
@@ -97,5 +97,21 @@ void main() {
     expect(prompt, isNot(contains(placeholder)));
     // The plan inside the prompt is a valid document on its own.
     expect(parseImport(prompt, (r) => templates[r]).ok, true);
+  });
+
+  test('the fix prompt has the problems, the answer, and the keep-the-ids rule', () {
+    final prompt = fillFixPrompt(
+      template: File('assets/prompt/fix_prompt.md').readAsStringSync(),
+      uiReference: uiReference,
+      problems: ['data.items: required', 'surfaces.tile.children[0]: "heatmap" does not show on home-screen widgets'],
+      answer: 'Here is your plan: {"kind":"goal","id":"x"}',
+      today: today,
+    );
+    expect(prompt, contains('- data.items: required'));
+    expect(prompt, contains('- surfaces.tile.children[0]'));
+    expect(prompt, contains('{"kind":"goal","id":"x"}'));
+    expect(prompt, contains('Keep every "id"'));
+    expect(prompt, contains('# Custom look'));
+    expect(prompt, isNot(contains(placeholder)));
   });
 }

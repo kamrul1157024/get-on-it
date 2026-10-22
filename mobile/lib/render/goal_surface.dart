@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../actions/action_router.dart';
 import '../app/providers.dart';
 import 'components.dart';
+import 'layout_guard.dart';
 import 'renderer.dart';
 
 /// Renders one surface of one goal, with actions routed to the app.
@@ -34,6 +35,6 @@ class GoalSurface extends ConsumerWidget {
         return other == null || t == null ? null : (tree: t, scope: other.scope);
       },
     );
-    return withAccent(context, view.goal.accent, Builder(builder: (_) => buildNode(tree, rc)));
+    return withAccent(context, view.goal.accent, LayoutGuard(child: Builder(builder: (_) => buildNode(tree, rc))));
   }
 }
