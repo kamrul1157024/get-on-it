@@ -3,6 +3,7 @@ package app.getonit
 import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.content.pm.ApplicationInfo
 import android.provider.Settings
 import app.getonit.nudge.NudgeEngine
@@ -57,7 +58,23 @@ class MainActivity : FlutterActivity() {
                 }
                 "nudgeStatus" -> result.success(mapOf("running" to NudgeService.running, "usageAccess" to hasUsageAccess()))
                 "openUsageAccessSettings" -> {
-                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    // Straight to this app's switch where the phone supports it.
+                    val direct = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try {
+                        startActivity(direct)
+                    } catch (e: ActivityNotFoundException) {
+                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                    result.success(null)
+                }
+                // App info: where "Allow restricted settings" is, for an app
+                // installed from a downloaded APK (Android 13+).
+                "openAppDetails" -> {
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
                     result.success(null)
                 }
                 "listApps" -> {

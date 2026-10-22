@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../nudges/usage_access_help.dart';
 import '../update/update_dialog.dart';
 import '../../app/providers.dart';
 import '../../core/schema/capabilities.dart';
@@ -407,7 +408,7 @@ class _NudgesSection extends ConsumerWidget {
             trailing: s.usageAccess
                 ? null
                 : TextButton(
-                    onPressed: () => ref.read(nudgeBridgeProvider).openUsageAccessSettings(),
+                    onPressed: () => showUsageAccessHelp(context, ref.read(nudgeBridgeProvider)),
                     child: const Text('Allow'),
                   ),
           ),

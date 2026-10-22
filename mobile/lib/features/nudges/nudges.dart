@@ -18,6 +18,9 @@ abstract class NudgeBridge {
 
   Future<void> openUsageAccessSettings();
 
+  /// App info, where Android 13+ hides "Allow restricted settings".
+  Future<void> openAppDetails();
+
   Future<List<({String package, String label})>> listApps();
 }
 
@@ -36,6 +39,9 @@ class ChannelNudgeBridge implements NudgeBridge {
 
   @override
   Future<void> openUsageAccessSettings() => systemChannel.invokeMethod('openUsageAccessSettings');
+
+  @override
+  Future<void> openAppDetails() => systemChannel.invokeMethod('openAppDetails');
 
   @override
   Future<List<({String package, String label})>> listApps() async {

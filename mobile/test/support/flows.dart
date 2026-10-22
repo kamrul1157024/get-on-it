@@ -782,6 +782,10 @@ Future<void> nudgesFlow(WidgetTester tester, Fakes fakes, {required Future<void>
     find.descendant(of: find.byKey(const ValueKey('nudges-usage-access')), matching: find.text('Allow')),
   );
   await settle(tester);
+  // The steps for Android's restricted setting come first.
+  expect(find.byKey(const ValueKey('usage-help')), findsOneWidget);
+  await tapKey(tester, 'usage-open-settings');
+  await tapKey(tester, 'usage-close');
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await settle(tester);

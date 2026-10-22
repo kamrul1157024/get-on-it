@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/permissions/permission_prompt.dart';
 import '../features/update/update_dialog.dart';
 import '../features/drive/drive_controller.dart';
 import '../features/goal/goal_screen.dart';
@@ -47,11 +48,16 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
   bool _remindersStarted = false;
   bool _updateChecked = false;
 
-  void _checkForUpdate() {
+  /// Once per start: the permission popup first, then the update dialog, so
+  /// the two never stack.
+  Future<void> _afterStart() async {
     if (_updateChecked) return;
     _updateChecked = true;
-    final ctx = navigatorKey.currentContext;
-    if (ctx != null) checkForUpdateOnStart(ctx, ref);
+    var ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+    await askForPermissionsOnce(ctx, ref);
+    ctx = navigatorKey.currentContext;
+    if (ctx != null && ctx.mounted) await checkForUpdateOnStart(ctx, ref);
   }
 
   void _startReminders() {
@@ -155,7 +161,7 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
         data: (_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _startReminders();
-            _checkForUpdate();
+            _afterStart();
           });
           return const TodayScreen();
         },
