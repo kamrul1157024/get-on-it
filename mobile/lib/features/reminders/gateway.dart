@@ -25,6 +25,10 @@ class ReminderPermissions {
 abstract class NotificationGateway {
   Future<void> init(ReminderTap onTap);
 
+  /// Reads the phone's time zone again. True when it changed since the last
+  /// read, so reminders must be planned again in the new zone.
+  Future<bool> refreshTimeZone();
+
   /// The reminder that started the app, if any.
   Future<(String, String?)?> launchTap();
 
@@ -68,6 +72,20 @@ class LocalNotificationsGateway implements NotificationGateway {
       },
     );
     _ready = true;
+  }
+
+  @override
+  Future<bool> refreshTimeZone() async {
+    if (!_ready) return false;
+    try {
+      final zone = (await FlutterTimezone.getLocalTimezone()).identifier;
+      if (zone == tz.local.name) return false;
+      tz.setLocalLocation(tz.getLocation(zone));
+      return true;
+    } catch (e) {
+      debugPrint('Time zone not found: $e');
+      return false;
+    }
   }
 
   @override

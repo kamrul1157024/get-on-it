@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../render/goal_surface.dart';
 import '../import/ask_ai_screen.dart';
-import '../reminders/planner.dart';
+import '../reminders/reminder_labels.dart';
 import '../reminders/reminders_controller.dart';
 
 class GoalScreen extends ConsumerWidget {
@@ -60,7 +60,10 @@ class GoalScreen extends ConsumerWidget {
               if (view?.goal.reminders != null)
                 remindersOn
                     ? const PopupMenuItem(value: 'reminders-off', child: Text('Turn reminders off'))
-                    : PopupMenuItem(value: 'reminders-on', child: Text('Turn reminders on (${presetOf(view!.goal)})')),
+                    : PopupMenuItem(
+                        value: 'reminders-on',
+                        child: Text(turnOnLabel(view!.goal, use24h: MediaQuery.alwaysUse24HourFormatOf(context))),
+                      ),
               const PopupMenuItem(value: 'edit-ai', child: Text('Change plan with AI')),
               const PopupMenuItem(value: 'look-ai', child: Text('Change the look with AI')),
               const PopupMenuItem(value: 'delete', child: Text('Delete goal')),

@@ -78,6 +78,13 @@ class RemindersController extends Notifier<RemindersState> {
     if (launch != null) onTap(launch.$1, launch.$2);
   }
 
+  /// After travel or a manual change, a 19:00 reminder must ring at 19:00 in
+  /// the new zone, not at the old zone's instant.
+  Future<void> refreshTimeZone() async {
+    if (!_started) return;
+    if (await _gw.refreshTimeZone()) await sync();
+  }
+
   Future<void> refreshPermissions() async {
     state = RemindersState(permissions: await _gw.permissions(), planned: state.planned);
   }

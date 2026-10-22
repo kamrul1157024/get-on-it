@@ -28,7 +28,9 @@ void main() {
     );
     final lec = item(s, 'lec-07');
     expect(lec['positionSec'], 300);
-    expect(lec['positionLabel'], '5:00');
+    expect(lec['positionLabel'], '5 min');
+    expect(lec['resumeLabel'], 'Continue from 5 min');
+    expect(lec['resumeText'], 'Stopped at 5 min · 1 h 15 min left');
     expect(lec['watched'], closeTo(2052 / 4800, 1e-9));
     expect(lec['done'], false);
     expect((s['next'] as Map)['id'], 'lec-07');

@@ -39,7 +39,7 @@ State keys for every engine: progress (0 to 1), pctLabel ("42%"), progressLabel,
 - check: checked, avoid, cleanDays, cleanDaysLabel, buttonLabel
 - checklist: steps (list of {id, title, done}), doneCount, label ("2 / 5")
 - page_range: book.title, book.author, lastPage, nextPage, perDay, perDayLabel, today.label ("p. 45–46"), today.startPage, today.endPage, today.minutesLabel, today.pagesLeft, finishLabel, canOpen, needsFile, isPhysical
-- video_series: items and next (each {id, title, kind, isVideo, isTask, videoId, embeddable, url, week, done, durationLabel, resumeLabel, remainingLabel, positionSec}), hasNext, doneCount, itemCount, lecturesLabel, hoursLabel, todayWatchedLabel, paceText
+- video_series: items and next (each {id, title, kind, isVideo, isTask, videoId, embeddable, url, week, done, durationLabel, resumeLabel ("Continue from 34 min 12 s"), resumeText ("Stopped at 34 min 12 s · 41 min left"), remainingLabel, positionSec}), hasNext, doneCount, itemCount, lecturesLabel, hoursLabel, todayWatchedLabel, paceText
 
 ## Components
 

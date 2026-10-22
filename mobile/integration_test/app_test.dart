@@ -32,6 +32,12 @@ void main() {
     TestClock? clock,
   }) async {
     rootBundle.clear();
+    // Android lets an app read the clipboard only while it has focus, and on
+    // the slow CI emulator something takes focus now and then: the clipboard
+    // tests failed at random. The flows test the app, so they use the same
+    // in-memory clipboard as the host tests.
+    fakeClipboard(tester.binding.defaultBinaryMessenger);
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
     final db = memoryDatabase();
     addTearDown(db.close);
     // Tear-downs run last-first: the app goes away before its database
@@ -272,7 +278,7 @@ void main() {
   testWidgets('the real YouTube player opens', skip: isCi, (tester) async {
     await start(tester, realPlayer: true);
     await importPlan(tester, await embeddableCourse());
-    await tester.tap(find.text('▶ Resume 0:00'));
+    await tester.tap(find.text('▶ Start'));
     await waitFor(tester, find.text('Lecture 1: Introduction'));
     expect(find.byType(YoutubePlayer), findsOneWidget);
     await tester.pageBack();

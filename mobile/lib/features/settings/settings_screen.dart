@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/time/clock_format.dart';
 import '../nudges/usage_access_help.dart';
 import '../nudges/wasted_time.dart';
 import '../update/update_dialog.dart';
@@ -32,10 +34,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Work after midnight counts for the day before, until this hour.'),
             trailing: DropdownButton<int>(
               value: hour,
-              items: [
-                for (var h = 0; h <= 6; h++)
-                  DropdownMenuItem(value: h, child: Text('${h.toString().padLeft(2, '0')}:00')),
-              ],
+              items: [for (var h = 0; h <= 6; h++) DropdownMenuItem(value: h, child: Text(clockOf(context, h * 60)))],
               onChanged: (h) {
                 if (h != null) ref.read(repositoryProvider).setSetting('dayStartHour', '$h');
               },
@@ -48,16 +47,6 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           const _DriveSection(),
           const Divider(),
-          ListTile(
-            title: const Text('Capability manifest'),
-            subtitle: const Text('Give this to Claude so that it makes plans this app can show.'),
-            trailing: const Icon(Icons.copy),
-            onTap: () {
-              final json = const JsonEncoder.withIndent('  ').convert(Capabilities.manifest(appVersion));
-              Clipboard.setData(ClipboardData(text: json));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
-            },
-          ),
           const ListTile(title: Text('Version'), subtitle: Text(appVersion)),
           Consumer(
             builder: (context, ref, _) => ListTile(
@@ -67,6 +56,23 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Get the newest version from GitHub'),
               onTap: () => checkForUpdateNow(context, ref),
             ),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text('Advanced', style: Theme.of(context).textTheme.titleMedium),
+          ),
+          ListTile(
+            title: const Text('Capability manifest'),
+            subtitle: const Text(
+              'A list of what this app can show. You only need it if an AI tool asks what Get On It supports.',
+            ),
+            trailing: const Icon(Icons.copy),
+            onTap: () {
+              final json = const JsonEncoder.withIndent('  ').convert(Capabilities.manifest(appVersion));
+              Clipboard.setData(ClipboardData(text: json));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
+            },
           ),
         ],
       ),
@@ -274,23 +280,27 @@ class _RemindersSection extends ConsumerWidget {
               TextButton(
                 key: const ValueKey('quiet-start'),
                 onPressed: () => pickQuiet(true),
-                child: Text(clockText(rules.quietStart)),
+                child: Text(clockOf(context, rules.quietStart)),
               ),
               const Text('–'),
               TextButton(
                 key: const ValueKey('quiet-end'),
                 onPressed: () => pickQuiet(false),
-                child: Text(clockText(rules.quietEnd)),
+                child: Text(clockOf(context, rules.quietEnd)),
               ),
             ],
           ),
         ),
         ListTile(
           key: const ValueKey('pause'),
-          title: Text(paused ? 'Paused until ${DayClock.isoDate(rules.pausedUntilDay!)}' : 'Pause all reminders'),
+          title: Text(
+            paused
+                ? 'Paused until ${DateFormat('EEE d MMM').format(DayClock.dateOf(rules.pausedUntilDay!))}'
+                : 'Pause all reminders',
+          ),
           subtitle: Text('At most ${rules.dailyAlarmLimit} alarms a day across all goals.'),
           trailing: paused
-              ? TextButton(key: const ValueKey('pause-resume'), onPressed: c.resume, child: const Text('Resume'))
+              ? TextButton(key: const ValueKey('pause-resume'), onPressed: c.resume, child: const Text('Turn back on'))
               : PopupMenuButton<int>(
                   key: const ValueKey('pause-menu'),
                   onSelected: c.pause,

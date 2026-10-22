@@ -124,8 +124,18 @@ class VideoSeriesEngine implements ProgressEngine {
         'done': done,
         'watched': fraction,
         'positionSec': done ? 0 : position.round(),
-        'positionLabel': clockLabel(done ? 0 : position),
-        'resumeLabel': i['embeddable'] == false ? 'Watch on YouTube' : 'Resume ${clockLabel(done ? 0 : position)}',
+        'positionLabel': positionLabel(done ? 0 : position),
+        'resumeLabel': i['embeddable'] == false
+            ? 'Watch on YouTube'
+            : (done ? 'Watch again' : (position < 1 ? 'Start' : 'Continue from ${positionLabel(position)}')),
+        // One line for under the title: where the user stopped, and what is left.
+        'resumeText': task
+            ? ''
+            : (done
+                  ? 'Watched · ${minutesLabel(d)}'
+                  : position < 1
+                  ? 'Not started · ${minutesLabel(d)}'
+                  : 'Stopped at ${positionLabel(position)} · ${minutesLabel(math.max(0, d - position))} left'),
         'durationLabel': task ? 'Task' : minutesLabel(d),
         'remainingLabel': task ? '' : '${minutesLabel(math.max(0, d - position))} left',
         'sub': [

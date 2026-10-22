@@ -11,7 +11,7 @@ import '../../data/repository.dart';
 import '../../render/components.dart';
 import '../../render/surface_preview.dart';
 import '../../render/template_lint.dart';
-import '../reminders/planner.dart';
+import '../reminders/reminder_labels.dart';
 import 'ask_ai_screen.dart';
 import '../reminders/reminders_controller.dart';
 
@@ -196,7 +196,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   label: const Text('Paste'),
                 ),
                 const SizedBox(width: 8),
-                FilledButton.tonal(key: const ValueKey('import-check'), onPressed: _check, child: const Text('Check')),
+                FilledButton.tonal(
+                  key: const ValueKey('import-check'),
+                  onPressed: _check,
+                  child: const Text('Check plan'),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -214,8 +218,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 Card.outlined(
                   child: ListTile(
                     leading: const Icon(Icons.dashboard_customize_outlined),
-                    title: Text('Template: ${tpl.title}'),
-                    subtitle: Text('${tpl.ref} · version ${tpl.version}'),
+                    title: Text('New design: ${tpl.title}'),
+                    subtitle: Text('How the goal screen and widgets look · version ${tpl.version}'),
                   ),
                 ),
               for (final p in _previews)
@@ -265,6 +269,11 @@ class _Errors extends StatelessWidget {
             Text(
               'This plan has problems',
               style: TextStyle(color: scheme.onErrorContainer, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'The details below are for the AI. Use "Fix with AI" to send them back to it.',
+              style: TextStyle(color: scheme.onErrorContainer, fontSize: 12),
             ),
             const SizedBox(height: 8),
             SelectableText(
@@ -320,6 +329,11 @@ class _PreviewCard extends StatelessWidget {
               const SizedBox(height: 12),
               _SurfaceTabs(p, broken: broken, onLayout: onLayout),
             ],
+            if (p.warnings.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Notes for the AI. The plan still works; some text may show empty.', style: t.labelMedium),
+              ),
             for (final w in p.warnings)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -332,9 +346,9 @@ class _PreviewCard extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 value: remindersOn,
                 onChanged: onReminders,
-                title: const Text('Turn on the proposed reminders'),
+                title: const Text('Turn on the reminders in this plan'),
                 subtitle: Text(
-                  [for (final s in ladderOf(p.goal)) '${clockText(s.minuteOfDay)} ${_levelName(s.level)}'].join(' → '),
+                  ladderDescription(p.goal, use24h: MediaQuery.alwaysUse24HourFormatOf(context)),
                   style: t.bodySmall,
                 ),
               ),
@@ -547,10 +561,3 @@ class _FixWithAi extends ConsumerWidget {
     );
   }
 }
-
-String _levelName(ReminderLevel l) => switch (l) {
-  ReminderLevel.notification => 'notification',
-  ReminderLevel.sticky => 'sticky',
-  ReminderLevel.alarm => 'alarm',
-  ReminderLevel.strictAlarm => 'strict alarm',
-};
