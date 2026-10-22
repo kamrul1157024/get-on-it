@@ -32,6 +32,12 @@ void main() {
     TestClock? clock,
   }) async {
     rootBundle.clear();
+    // Android lets an app read the clipboard only while it has focus, and on
+    // the slow CI emulator something takes focus now and then: the clipboard
+    // tests failed at random. The flows test the app, so they use the same
+    // in-memory clipboard as the host tests.
+    fakeClipboard(tester.binding.defaultBinaryMessenger);
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
     final db = memoryDatabase();
     addTearDown(db.close);
     // Tear-downs run last-first: the app goes away before its database
