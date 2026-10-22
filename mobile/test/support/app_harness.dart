@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -212,16 +213,32 @@ class FakeUpdates implements ApkInstaller {
   int requests = 0;
   final installed = <String>[];
 
+  /// Clean-ups the app asked for: (installed version, newest on offer).
+  final cleanUps = <(String, String?)>[];
+
   http.Client get client => MockClient((req) async {
     requests++;
     return http.Response(jsonEncode(releases), 200);
   });
 
   @override
-  Future<void> install(String url, {void Function(double progress)? onProgress}) async {
+  Future<void> install(UpdateInfo info, {void Function(double progress)? onProgress}) async {
     onProgress?.call(1);
-    installed.add(url);
+    installed.add(info.apkUrl!);
   }
+
+  /// Records clean-ups instead of touching the disk; test/update_test.dart
+  /// covers the files.
+  late final downloads = _RecordingDownloads(this);
+}
+
+class _RecordingDownloads extends UpdateDownloads {
+  _RecordingDownloads(this.updates) : super(updates.client, () async => Directory.systemTemp);
+
+  final FakeUpdates updates;
+
+  @override
+  Future<void> cleanUp(String installed, {String? keep}) async => updates.cleanUps.add((installed, keep));
 }
 
 /// The whole app on a fresh in-memory database. Used by the host widget tests
@@ -246,6 +263,7 @@ Widget buildTestApp({
       permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
       httpClientProvider.overrideWithValue(fakes.updates.client),
       apkInstallerProvider.overrideWithValue(fakes.updates),
+      updateDownloadsProvider.overrideWithValue(fakes.updates.downloads),
       reminderGatewayProvider.overrideWithValue(fakes.notifications),
       if (!realNudges) nudgeBridgeProvider.overrideWithValue(fakes.nudges),
       widgetBridgeProvider.overrideWithValue(fakes.widgets),

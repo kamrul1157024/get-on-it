@@ -11,7 +11,11 @@ import 'update_service.dart';
 Future<void> checkForUpdateOnStart(BuildContext context, WidgetRef ref) async {
   final service = ref.read(updateServiceProvider);
   if (!service.isReleaseBuild) return;
+  final downloads = ref.read(updateDownloadsProvider);
+  // The update that just installed leaves its APK behind; it goes now.
+  await _cleanUp(downloads, service.currentVersion);
   final info = await service.check();
+  if (info != null) await _cleanUp(downloads, service.currentVersion, keep: info.latestVersion);
   if (info == null || await service.isDismissed(info.latestVersion) || !context.mounted) return;
   await showUpdateDialog(context, ref, info);
   await service.dismiss(info.latestVersion);
@@ -20,7 +24,12 @@ Future<void> checkForUpdateOnStart(BuildContext context, WidgetRef ref) async {
 /// The "Check for updates" row in Settings: always answers.
 Future<void> checkForUpdateNow(BuildContext context, WidgetRef ref) async {
   final service = ref.read(updateServiceProvider);
+  final downloads = ref.read(updateDownloadsProvider);
+  if (service.isReleaseBuild) await _cleanUp(downloads, service.currentVersion);
   final info = await service.check();
+  if (info != null && service.isReleaseBuild) {
+    await _cleanUp(downloads, service.currentVersion, keep: info.latestVersion);
+  }
   if (!context.mounted) return;
   if (info == null) {
     ScaffoldMessenger.of(context)
@@ -31,6 +40,15 @@ Future<void> checkForUpdateNow(BuildContext context, WidgetRef ref) async {
     return;
   }
   await showUpdateDialog(context, ref, info);
+}
+
+/// Disk trouble is not worth a message: the files are in the cache.
+Future<void> _cleanUp(UpdateDownloads downloads, String installed, {String? keep}) async {
+  try {
+    await downloads.cleanUp(installed, keep: keep);
+  } catch (e) {
+    debugPrint('[update] clean-up failed: $e');
+  }
 }
 
 Future<void> showUpdateDialog(BuildContext context, WidgetRef ref, UpdateInfo info) => showDialog<void>(
@@ -61,11 +79,10 @@ Future<void> showUpdateDialog(BuildContext context, WidgetRef ref, UpdateInfo in
         key: const ValueKey('update-install'),
         onPressed: () {
           Navigator.pop(ctx);
-          final url = info.apkUrl;
-          if (url == null) {
+          if (info.apkUrl == null) {
             ref.read(externalLauncherProvider)(Uri.parse(releasesPageUrl));
           } else {
-            _install(context, ref, url);
+            _install(context, ref, info);
           }
         },
         child: Text(info.apkUrl == null ? 'Open download page' : 'Install'),
@@ -74,7 +91,7 @@ Future<void> showUpdateDialog(BuildContext context, WidgetRef ref, UpdateInfo in
   ),
 );
 
-Future<void> _install(BuildContext context, WidgetRef ref, String url) async {
+Future<void> _install(BuildContext context, WidgetRef ref, UpdateInfo info) async {
   final progress = ValueNotifier<double?>(null);
   final messenger = ScaffoldMessenger.of(context);
   final banner = messenger.showSnackBar(
@@ -95,7 +112,7 @@ Future<void> _install(BuildContext context, WidgetRef ref, String url) async {
     ),
   );
   try {
-    await ref.read(apkInstallerProvider).install(url, onProgress: (p) => progress.value = p);
+    await ref.read(apkInstallerProvider).install(info, onProgress: (p) => progress.value = p);
     banner.close();
   } catch (e) {
     banner.close();
