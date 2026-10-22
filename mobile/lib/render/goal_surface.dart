@@ -23,7 +23,7 @@ class GoalSurface extends ConsumerWidget {
     if (tree == null) {
       return fallback ??
           Card(
-            child: ListTile(title: Text(view.goal.title), subtitle: const Text('This template has no view here.')),
+            child: ListTile(title: Text(view.goal.title), subtitle: const Text('This goal has nothing to show here.')),
           );
     }
     final rc = RenderContext(

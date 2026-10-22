@@ -197,12 +197,16 @@ String minutesLabel(num seconds) {
   return r == 0 ? '$h h' : '$h h $r min';
 }
 
-String clockLabel(num seconds) {
+/// A place in a video, spelled out: "34 min 12 s", "1 h 5 min", "45 s".
+/// Not "34:12", which reads like a clock time.
+String positionLabel(num seconds) {
   final s = seconds.round();
   final h = s ~/ 3600;
   final m = (s % 3600) ~/ 60;
-  final sec = (s % 60).toString().padLeft(2, '0');
-  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$sec' : '$m:$sec';
+  final sec = s % 60;
+  if (h > 0) return m == 0 ? '$h h' : '$h h $m min';
+  if (m == 0) return '$sec s';
+  return sec == 0 ? '$m min' : '$m min $sec s';
 }
 
 num? asNum(Object? v) => v is num ? v : (v is String ? num.tryParse(v) : null);

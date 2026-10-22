@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:getonit/core/time/clock_format.dart';
 import 'package:getonit/features/player/video_backend.dart';
 import 'package:getonit/features/nudges/wasted_time.dart';
 import 'package:getonit/features/reminders/planner.dart';
@@ -396,7 +397,7 @@ Future<void> _tapIn(WidgetTester tester, String goalId, Finder f) async {
 /// done in the player moves the course on.
 Future<void> playerFlow(WidgetTester tester, Fakes fakes) async {
   await importPlan(tester, await embeddableCourse());
-  await _tapIn(tester, 'stanford-cs229', find.text('▶ Resume 0:00'));
+  await _tapIn(tester, 'stanford-cs229', find.text('▶ Start'));
   expect(find.text('Lecture 1: Introduction'), findsOneWidget, reason: 'player title');
   expect(fakes.video.videoId, 'jGwO_UgTS7I');
   expect(fakes.video.startSec, 0);
@@ -412,9 +413,9 @@ Future<void> playerFlow(WidgetTester tester, Fakes fakes) async {
   fakes.video.play(120.0);
   await goBack(tester); // closing saves 120
   expect(fakes.video.disposed, true);
-  expect(_inTile('stanford-cs229', find.text('▶ Resume 2:00')), findsOneWidget);
+  expect(_inTile('stanford-cs229', find.text('▶ Continue from 2 min')), findsOneWidget);
 
-  await _tapIn(tester, 'stanford-cs229', find.text('▶ Resume 2:00'));
+  await _tapIn(tester, 'stanford-cs229', find.text('▶ Continue from 2 min'));
   expect(fakes.video.startSec, 120);
 
   // The owner does not allow the video in other apps: explain and offer YouTube.
@@ -563,15 +564,20 @@ Future<void> clipboardFlow(WidgetTester tester) async {
   await goBack(tester);
 }
 
+/// A minute of the day as the app shows it here: the phone's 24-hour setting
+/// decides "19:00" or "7:00 PM".
+String hm(WidgetTester tester, int minuteOfDay) =>
+    clockDisplay(minuteOfDay, use24h: tester.platformDispatcher.alwaysUse24HourFormat);
+
 /// Settings: change "My day starts at" and copy the capability manifest.
 Future<void> settingsFlow(WidgetTester tester) async {
   await tester.tap(find.byTooltip('Settings'));
   await settle(tester);
-  await tapText(tester, '00:00');
-  await tester.tap(find.text('04:00').last);
+  await tapText(tester, hm(tester, 0));
+  await tester.tap(find.text(hm(tester, 4 * 60)).last);
   await settle(tester);
-  expect(find.text('04:00'), findsOneWidget);
-  expect(find.text('00:00'), findsNothing);
+  expect(find.text(hm(tester, 4 * 60)), findsOneWidget);
+  expect(find.text(hm(tester, 0)), findsNothing);
 
   await tapText(tester, 'Capability manifest');
   expect(find.text('Copied'), findsOneWidget);
@@ -662,8 +668,14 @@ const _strictHabit = {
 Future<void> remindersFlow(WidgetTester tester, Fakes fakes) async {
   final n = fakes.notifications;
   await pastePlan(tester, jsonEncode(_strictHabit));
-  expect(find.text('Turn on the proposed reminders'), findsOneWidget);
-  expect(find.textContaining('19:00 notification → 19:30 sticky → 20:00 alarm → 20:30 strict alarm'), findsOneWidget);
+  expect(find.text('Turn on the reminders in this plan'), findsOneWidget);
+  expect(
+    find.textContaining(
+      '${hm(tester, 19 * 60)} notification → ${hm(tester, 19 * 60 + 30)} notification that stays → '
+      '${hm(tester, 20 * 60)} alarm → ${hm(tester, 20 * 60 + 30)} alarm that rings until you start',
+    ),
+    findsOneWidget,
+  );
   await tapKey(tester, 'import-confirm');
   await settle(tester);
   expect(n.scheduled, isEmpty, reason: 'imported reminders stay off until the user turns them on');
@@ -735,8 +747,9 @@ Future<void> remindersFlow(WidgetTester tester, Fakes fakes) async {
   await tapText(tester, 'Turn reminders off');
   expect(n.scheduled.keys.where((id) => id & snoozeBit == 0), isEmpty);
   await tapKey(tester, 'goal-menu');
-  expect(find.text('Turn reminders on (strict)'), findsOneWidget);
-  await tapText(tester, 'Turn reminders on (strict)');
+  final turnOn = 'Turn reminders on (strict, from ${hm(tester, 19 * 60)})';
+  expect(find.text(turnOn), findsOneWidget);
+  await tapText(tester, turnOn);
   expect(n.scheduled.keys.where((id) => id & snoozeBit == 0), hasLength(24));
   await goBack(tester);
 }

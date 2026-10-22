@@ -2,7 +2,7 @@
   "kind": "template",
   "schemaVersion": "1.0",
   "id": "course",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "title": "Course Complete",
   "engine": "video_series",
   "dataSchema": {
@@ -66,7 +66,7 @@
                 { "type": "text", "style": "body", "value": "{{state.next.title}}" },
                 { "type": "text", "style": "caption", "value": "{{state.next.sub}}" },
                 { "type": "text", "style": "caption", "visible": "{{state.next.isVideo}}",
-                  "value": "Resume at {{state.next.positionLabel}} · {{state.next.remainingLabel}}" }
+                  "value": "{{state.next.resumeText}}" }
               ]}
             ]},
             { "type": "column", "gap": 6, "children": [

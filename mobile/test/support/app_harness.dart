@@ -105,12 +105,31 @@ class FakeGateway implements NotificationGateway {
   @override
   Future<void> init(ReminderTap onTap) async => _onTap = onTap;
 
+  /// The phone's time zone; a test changes it to simulate travel.
+  String zone = 'Europe/Berlin';
+  String _seenZone = 'Europe/Berlin';
+  int scheduleCalls = 0;
+  int zoneChanges = 0;
+
+  /// How often the reminders were planned (each plan reads the pending ids).
+  int plans = 0;
+
+  @override
+  Future<bool> refreshTimeZone() async {
+    if (zone == _seenZone) return false;
+    _seenZone = zone;
+    zoneChanges++;
+    return true;
+  }
+
   @override
   Future<(String, String?)?> launchTap() async => null;
 
   @override
-  Future<void> schedule(PlannedReminder r, {DateTime? at, bool snoozed = false}) async =>
-      scheduled[r.id] = (r, at ?? r.localTime);
+  Future<void> schedule(PlannedReminder r, {DateTime? at, bool snoozed = false}) async {
+    scheduleCalls++;
+    scheduled[r.id] = (r, at ?? r.localTime);
+  }
 
   @override
   Future<void> cancel(int id) async {
@@ -119,7 +138,10 @@ class FakeGateway implements NotificationGateway {
   }
 
   @override
-  Future<Set<int>> pendingIds() async => scheduled.keys.toSet();
+  Future<Set<int>> pendingIds() async {
+    plans++;
+    return scheduled.keys.toSet();
+  }
 
   @override
   Future<ReminderPermissions> permissions() async => permissionsGranted;

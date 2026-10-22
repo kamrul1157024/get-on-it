@@ -104,7 +104,10 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
     if (state == AppLifecycleState.resumed) {
       ref.read(currentDayProvider.notifier).refresh();
       // The user may have changed a permission in system settings.
-      if (_remindersStarted) ref.read(remindersProvider.notifier).refreshPermissions();
+      if (_remindersStarted) {
+        ref.read(remindersProvider.notifier).refreshPermissions();
+        ref.read(remindersProvider.notifier).refreshTimeZone();
+      }
       if (widget.startReminders) ref.read(nudgesProvider.notifier).refreshStatus();
       // Time in other apps grew while this one was away.
       ref.invalidate(timeLostProvider);

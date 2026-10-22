@@ -272,7 +272,7 @@ void main() {
   testWidgets('the real YouTube player opens', skip: isCi, (tester) async {
     await start(tester, realPlayer: true);
     await importPlan(tester, await embeddableCourse());
-    await tester.tap(find.text('▶ Resume 0:00'));
+    await tester.tap(find.text('▶ Start'));
     await waitFor(tester, find.text('Lecture 1: Introduction'));
     expect(find.byType(YoutubePlayer), findsOneWidget);
     await tester.pageBack();
