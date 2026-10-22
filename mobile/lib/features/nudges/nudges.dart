@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../reminders/gateway.dart';
 import '../reminders/planner.dart';
 import '../reminders/reminders_controller.dart';
+import 'wasted_time.dart';
 
 /// The native nudge service (android/.../nudge/NudgeService.kt). Tests use a
 /// fake.
@@ -22,6 +23,10 @@ abstract class NudgeBridge {
   Future<void> openAppDetails();
 
   Future<List<({String package, String label})>> listApps();
+
+  /// Today's lost time per app, most first, without [excluded]; empty without
+  /// usage access.
+  Future<List<AppUsage>> usageToday(List<String> excluded);
 }
 
 class ChannelNudgeBridge implements NudgeBridge {
@@ -47,6 +52,20 @@ class ChannelNudgeBridge implements NudgeBridge {
   Future<List<({String package, String label})>> listApps() async {
     final list = await systemChannel.invokeListMethod<Map>('listApps') ?? const [];
     return [for (final m in list) (package: m['package'] as String, label: m['label'] as String)];
+  }
+
+  @override
+  Future<List<AppUsage>> usageToday(List<String> excluded) async {
+    final list = await systemChannel.invokeListMethod<Map>('usageToday', excluded) ?? const [];
+    return [
+      for (final m in list)
+        AppUsage(
+          m['package'] as String,
+          m['label'] as String,
+          m['category'] as String? ?? '',
+          (m['minutes'] as num).toInt(),
+        ),
+    ];
   }
 }
 
@@ -139,6 +158,11 @@ class NudgeController extends Notifier<NudgeState> {
     return out;
   }
 
+  /// Units of today's open goals, to tell lost time in.
+  Future<List<Equivalent>> equivalents() async => equivalentsFor([
+    for (final g in await ref.read(repositoryProvider).allGoals()) ?ref.read(goalViewProvider(g.id)),
+  ]);
+
   Future<Map<String, Object?>> config() async {
     final settings = await ref.read(repositoryProvider).settings();
     final rules = ReminderRules.fromSettings(settings);
@@ -152,6 +176,8 @@ class NudgeController extends Notifier<NudgeState> {
       'maxPerDay': 4,
       'minGapMin': 120,
       'pending': pending,
+      'equivalents': [for (final e in await equivalents()) e.toJson()],
+      'excluded': excludedApps(settings),
     };
   }
 
@@ -195,6 +221,13 @@ class NudgeController extends Notifier<NudgeState> {
 
   Future<void> setApps(List<WatchedApp> apps) =>
       ref.read(repositoryProvider).setSetting('nudges.apps', jsonEncode([for (final a in apps) a.toJson()]));
+
+  /// Apps the user took off the lost-time list.
+  static List<String> excludedApps(Map<String, String> settings) =>
+      (jsonDecode(settings['nudges.excluded'] ?? '[]') as List).whereType<String>().toList();
+
+  Future<void> setExcluded(List<String> packages) =>
+      ref.read(repositoryProvider).setSetting('nudges.excluded', jsonEncode(packages));
 
   /// Apps suggested by the user's goals (`nudges.suggestedApps`); the user
   /// still chooses. Spec §12.2.

@@ -10,6 +10,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
@@ -48,6 +50,10 @@ object NudgeStore {
                 pending = o.optJSONArray("pending").objects().map {
                     PendingWork(it.getString("goalId"), it.getString("title"), it.getString("body"), it.getString("link"))
                 },
+                equivalents = o.optJSONArray("equivalents").objects().map {
+                    Equivalent(it.getDouble("unitMinutes"), it.getString("singular"), it.getString("plural"))
+                },
+                excluded = o.optJSONArray("excluded")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() } ?: emptySet(),
             )
         } catch (e: Exception) {
             NudgeConfig()
@@ -99,12 +105,57 @@ object NudgeEngine {
         return nudge
     }
 
-    /** Minutes of foreground use today for each watched app. */
-    fun usageToday(ctx: Context, apps: List<WatchedApp>): Map<String, Int> {
+    private fun statsToday(ctx: Context): Map<String, android.app.usage.UsageStats> {
         val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return emptyMap()
         val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val stats = usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())
+        return usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())
+    }
+
+    /** Minutes of foreground use today for each watched app. */
+    fun usageToday(ctx: Context, apps: List<WatchedApp>): Map<String, Int> {
+        val stats = statsToday(ctx)
         return apps.associate { it.packageName to ((stats[it.packageName]?.totalTimeInForeground ?: 0L) / 60_000L).toInt() }
+    }
+
+    /** Android's category of [pkg] as a word; "" when it has none or is hidden. */
+    fun category(ctx: Context, pkg: String): String = try {
+        when (ctx.packageManager.getApplicationInfo(pkg, 0).category) {
+            ApplicationInfo.CATEGORY_SOCIAL -> "social"
+            ApplicationInfo.CATEGORY_VIDEO -> "video"
+            ApplicationInfo.CATEGORY_GAME -> "game"
+            ApplicationInfo.CATEGORY_NEWS -> "news"
+            else -> ""
+        }
+    } catch (e: PackageManager.NameNotFoundException) {
+        ""
+    }
+
+    /** A watched app with its category, for the wording. */
+    fun withCategory(ctx: Context, app: WatchedApp) = app.copy(category = category(ctx, app.packageName))
+
+    data class AppUsage(val packageName: String, val label: String, val category: String, val minutes: Int)
+
+    /**
+     * Today's lost time, most first: social, video, game and news apps and the
+     * watched ones, without the ones the user took off the list. It stays on
+     * the phone.
+     */
+    fun lostToday(ctx: Context, config: NudgeConfig): List<AppUsage> {
+        val watched = config.apps.associateBy { it.packageName }
+        val pm = ctx.packageManager
+        return statsToday(ctx).values.mapNotNull { s ->
+            val pkg = s.packageName
+            val minutes = (s.totalTimeInForeground / 60_000L).toInt()
+            if (pkg == ctx.packageName || pkg in config.excluded || minutes < 1) return@mapNotNull null
+            val cat = category(ctx, pkg)
+            if (cat !in Wording.distracting && pkg !in watched) return@mapNotNull null
+            val label = watched[pkg]?.label ?: try {
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            } catch (e: PackageManager.NameNotFoundException) {
+                pkg
+            }
+            AppUsage(pkg, label, cat, minutes)
+        }.sortedByDescending { it.minutes }
     }
 
     fun ensureChannel(ctx: Context) {
@@ -181,7 +232,10 @@ class NudgeService : Service() {
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_USER_PRESENT -> NudgeEngine.handle(ctx, Trigger.Unlock)
+                Intent.ACTION_USER_PRESENT -> {
+                    val lost = NudgeEngine.lostToday(ctx, NudgeStore.config(ctx)).sumOf { it.minutes }
+                    NudgeEngine.handle(ctx, Trigger.Unlock(lost))
+                }
                 Intent.ACTION_SCREEN_ON -> {
                     handler.removeCallbacks(poll)
                     handler.postDelayed(poll, POLL_MS)
@@ -236,7 +290,8 @@ class NudgeService : Service() {
         if (!config.enabled || config.apps.isEmpty()) return
         val minutes = NudgeEngine.usageToday(this, config.apps)
         for (app in config.apps) {
-            if (NudgeEngine.handle(this, Trigger.Usage(app, minutes[app.packageName] ?: 0)) != null) return
+            val usage = Trigger.Usage(NudgeEngine.withCategory(this, app), minutes[app.packageName] ?: 0)
+            if (NudgeEngine.handle(this, usage) != null) return
         }
     }
 }

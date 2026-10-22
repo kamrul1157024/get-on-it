@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:getonit/features/player/video_backend.dart';
+import 'package:getonit/features/nudges/wasted_time.dart';
 import 'package:getonit/features/reminders/planner.dart';
 import 'package:getonit/features/reminders/reminders_controller.dart';
 
@@ -298,6 +299,47 @@ Future<void> previewFlow(WidgetTester tester) async {
   expect(find.text('Fix the warnings with AI (optional)'), findsOneWidget);
   expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNotNull);
   await goBack(tester);
+}
+
+/// "Time lost today": with usage access, the Today screen shows the lost
+/// time, what it could have been, and lets an app be taken off the list. The
+/// nudge settings carry the goals' units and the exclusions to the phone.
+Future<void> timeLostFlow(WidgetTester tester, Fakes fakes) async {
+  final b = fakes.nudges;
+  b.usage = const [
+    AppUsage('com.instagram.android', 'Instagram', 'social', 95),
+    AppUsage('com.google.android.youtube', 'YouTube', 'video', 50),
+    AppUsage('com.king.candycrush', 'Candy Crush', 'game', 10),
+    AppUsage('com.example.news', 'News', 'news', 5),
+  ];
+  await tapKey(tester, 'empty-samples');
+  // No usage access: no card.
+  expect(find.byKey(const ValueKey('time-lost')), findsNothing);
+
+  b.usageAccess = true;
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await waitFor(tester, find.byKey(const ValueKey('time-lost')));
+  expect(find.text('2 h 40 min'), findsOneWidget);
+  // The course is first: 160 min is 2 lectures of 75 min; the book 80 pages.
+  expect(find.text('That could have been 2 Stanford CS229 lectures, or 80 pages of Atomic Habits.'), findsOneWidget);
+  expect(find.text('1 h 35 min scrolling'), findsOneWidget);
+  expect(find.text('50 min watching'), findsOneWidget);
+  expect(find.byKey(const ValueKey('time-lost-app:com.example.news')), findsNothing, reason: 'top three only');
+
+  final units = (b.last['equivalents'] as List).cast<Map>();
+  expect(units.map((u) => u['plural']), ['Stanford CS229 lectures', 'pages of Atomic Habits']);
+
+  // Take Instagram off the list, then undo.
+  await tapKey(tester, 'time-lost-exclude:com.instagram.android');
+  await waitFor(tester, find.text('1 h 5 min'));
+  expect(find.byKey(const ValueKey('time-lost-app:com.instagram.android')), findsNothing);
+  expect(b.lastExcluded, ['com.instagram.android']);
+  await waitFor(tester, find.text('Undo'));
+  expect(b.last['excluded'], ['com.instagram.android']);
+  await tester.tap(find.text('Undo'));
+  await waitFor(tester, find.text('2 h 40 min'));
+  expect(b.lastExcluded, isEmpty);
 }
 
 // ---------------------------------------------------------------------------

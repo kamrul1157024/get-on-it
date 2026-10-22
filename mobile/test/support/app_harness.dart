@@ -19,6 +19,7 @@ import 'package:getonit/features/drive/drive_account.dart';
 import 'package:getonit/features/drive/drive_controller.dart';
 import 'package:getonit/features/drive/remote_store.dart';
 import 'package:getonit/features/nudges/nudges.dart';
+import 'package:getonit/features/nudges/wasted_time.dart';
 import 'package:getonit/features/player/video_backend.dart';
 import 'package:getonit/features/widgets/home_widgets.dart';
 import 'package:getonit/features/reminders/gateway.dart';
@@ -166,6 +167,21 @@ class FakeNudgeBridge implements NudgeBridge {
 
   @override
   Future<void> openAppDetails() async => appDetailsOpened++;
+
+  /// What the phone reports as lost time today.
+  var usage = <AppUsage>[];
+  List<String>? lastExcluded;
+
+  @override
+  Future<List<AppUsage>> usageToday(List<String> excluded) async {
+    lastExcluded = excluded;
+    return usageAccess
+        ? [
+            for (final u in usage)
+              if (!excluded.contains(u.package)) u,
+          ]
+        : const [];
+  }
 
   @override
   Future<List<({String package, String label})>> listApps() async => const [

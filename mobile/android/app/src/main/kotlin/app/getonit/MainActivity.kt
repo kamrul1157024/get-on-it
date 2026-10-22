@@ -56,6 +56,22 @@ class MainActivity : FlutterActivity() {
                     if (NudgeStore.config(this).enabled) NudgeService.start(this) else NudgeService.stop(this)
                     result.success(null)
                 }
+                // Lost time today for the Today card; the list stays on the phone.
+                "usageToday" -> {
+                    if (!hasUsageAccess()) {
+                        result.success(emptyList<Any>())
+                    } else {
+                        // The exclusions come with the call: the stored copy can lag a
+                        // just-made change.
+                        val excluded = (call.arguments as? List<*>)?.filterIsInstance<String>()?.toSet()
+                        val config = NudgeStore.config(this).let { c -> excluded?.let { c.copy(excluded = it) } ?: c }
+                        result.success(
+                            NudgeEngine.lostToday(this, config).map {
+                                mapOf("package" to it.packageName, "label" to it.label, "category" to it.category, "minutes" to it.minutes)
+                            },
+                        )
+                    }
+                }
                 "nudgeStatus" -> result.success(mapOf("running" to NudgeService.running, "usageAccess" to hasUsageAccess()))
                 "openUsageAccessSettings" -> {
                     // Straight to this app's switch where the phone supports it.
@@ -95,12 +111,18 @@ class MainActivity : FlutterActivity() {
                     } else {
                         val args = call.arguments as Map<*, *>
                         val trigger = if (args["trigger"] == "usage") {
+                            val pkg = args["package"] as String
                             Trigger.Usage(
-                                WatchedApp(args["package"] as String, args["label"] as String, (args["thresholdMin"] as Number).toInt()),
+                                WatchedApp(
+                                    pkg,
+                                    args["label"] as String,
+                                    (args["thresholdMin"] as Number).toInt(),
+                                    args["category"] as String? ?: NudgeEngine.category(this, pkg),
+                                ),
                                 (args["minutes"] as Number).toInt(),
                             )
                         } else {
-                            Trigger.Unlock
+                            Trigger.Unlock((args["lostMinutes"] as Number?)?.toInt() ?: 0)
                         }
                         val n = NudgeEngine.handle(this, trigger)
                         result.success(n?.let { mapOf("title" to it.title, "body" to it.body, "link" to it.work.link) })

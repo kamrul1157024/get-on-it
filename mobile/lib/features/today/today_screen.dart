@@ -9,6 +9,7 @@ import '../../render/goal_surface.dart';
 import '../goal/goal_screen.dart';
 import '../import/ask_ai_screen.dart';
 import '../import/import_screen.dart';
+import '../nudges/time_lost_card.dart';
 import '../settings/settings_screen.dart';
 
 const sampleAssets = [
@@ -73,6 +74,8 @@ class TodayScreen extends ConsumerWidget {
                 Text(DateFormat('EEEE, d MMMM').format(DateTime.now()), style: t.titleLarge),
                 Text('$done of ${list.length} done today', key: const ValueKey('today-summary'), style: t.bodyMedium),
                 const SizedBox(height: 16),
+                const TimeLostCard(),
+                const SizedBox(height: 12),
                 for (final g in list) ...[
                   GoalSurface(
                     key: ValueKey('goal-tile:${g.doc.id}'),
