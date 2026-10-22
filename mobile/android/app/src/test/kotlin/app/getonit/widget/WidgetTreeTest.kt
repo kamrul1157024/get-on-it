@@ -72,6 +72,33 @@ class WidgetTreeTest {
         onNode(hasText("Stretch")).assertExists()
     }
 
+    /**
+     * Small and medium widgets of AI-made plans (Claude's answers to the
+     * in-app prompts), resolved by Flutter. test/ai_tiles_test.dart writes the
+     * file and keeps it current.
+     */
+    @Test fun drawsTheTextOfAiMadeWidgets() {
+        val text = javaClass.classLoader!!.getResource("ai_tiles.json").readText()
+        val cases = org.json.JSONArray(text)
+        org.junit.Assert.assertTrue(cases.length() >= 8)
+        for (i in 0 until cases.length()) {
+            val case = cases.getJSONObject(i)
+            val tree = case.getJSONObject("tree")
+            val texts = case.getJSONArray("texts")
+            val wide = case.getString("name").endsWith(":tile_wide")
+            runGlanceAppWidgetUnitTest {
+                setAppWidgetSize(if (wide) DpSize(320.dp, 160.dp) else DpSize(160.dp, 160.dp))
+                setContext(context)
+                provideComposable { RenderNode(context, tree, null) }
+                for (j in 0 until texts.length()) {
+                    // "Practice" is also part of "Spanish practice": any match will do.
+                    val shown = hasText(texts.getString(j), ignoreCase = true)
+                    onAllNodes(shown).assertAny(shown)
+                }
+            }
+        }
+    }
+
     @Test fun dataActionsRunInTheBackgroundAndOthersOpenTheApp() {
         val data = WidgetTree.action(context, JSONObject("{\"type\":\"mark_done\",\"params\":{\"goalId\":\"g\"}}"))
         val open = WidgetTree.action(context, JSONObject("{\"type\":\"open_goal\",\"params\":{\"goalId\":\"g\"}}"))

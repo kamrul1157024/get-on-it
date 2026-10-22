@@ -1,0 +1,232 @@
+{
+  "kind": "bundle",
+  "schemaVersion": "1.0",
+  "documents": [
+    {
+      "kind": "template",
+      "schemaVersion": "1.0",
+      "id": "water-look",
+      "version": "1.0.0",
+      "title": "Custom Habit",
+      "engine": "count",
+      "dataSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target"],
+        "properties": {
+          "mode": {
+            "const": "count"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "target": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "period": {
+            "enum": ["day", "week"]
+          }
+        }
+      },
+      "surfaces": {
+        "screen": {
+          "type": "column",
+          "gap": 16,
+          "children": [
+            {
+              "type": "card",
+              "child": {
+                "type": "row",
+                "gap": 16,
+                "children": [
+                  {
+                    "type": "progress_ring",
+                    "value": "{{state.progress}}",
+                    "size": 96,
+                    "stroke": 10,
+                    "label": "{{state.count}}",
+                    "sublabel": "of {{state.target}}"
+                  },
+                  {
+                    "type": "column",
+                    "gap": 4,
+                    "expand": true,
+                    "children": [
+                      {
+                        "type": "text",
+                        "style": "title",
+                        "value": "{{goal.title}}"
+                      },
+                      {
+                        "type": "text",
+                        "style": "caption",
+                        "value": "{{state.label}} {{state.periodLabel}}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "counter",
+                    "decrement": {
+                      "type": "log_progress",
+                      "params": {
+                        "goalId": "{{goal.id}}",
+                        "delta": -1
+                      }
+                    },
+                    "increment": {
+                      "type": "log_progress",
+                      "params": {
+                        "goalId": "{{goal.id}}",
+                        "delta": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "card",
+              "child": {
+                "type": "column",
+                "gap": 14,
+                "children": [
+                  {
+                    "type": "row",
+                    "align": "between",
+                    "children": [
+                      {
+                        "type": "stat",
+                        "value": "{{state.streakLabel}}",
+                        "label": "Streak"
+                      },
+                      {
+                        "type": "stat",
+                        "value": "{{state.pctLabel}}",
+                        "label": "Today"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "week_dots",
+                    "days": "{{state.week}}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "section",
+              "title": "Last 12 weeks",
+              "child": {
+                "type": "heatmap",
+                "cells": "{{state.heatmap}}"
+              }
+            }
+          ]
+        },
+        "tile": {
+          "type": "card",
+          "style": "tile",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "column",
+            "gap": 8,
+            "align": "center",
+            "children": [
+              {
+                "type": "progress_ring",
+                "value": "{{state.progress}}",
+                "size": 72,
+                "stroke": 8,
+                "label": "{{state.count}}",
+                "sublabel": "/ {{state.target}}"
+              },
+              {
+                "type": "button",
+                "variant": "filled",
+                "label": "+1",
+                "action": {
+                  "type": "log_progress",
+                  "params": {
+                    "goalId": "{{goal.id}}",
+                    "delta": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "tile_wide": {
+          "type": "card",
+          "accent": "{{goal.accent}}",
+          "action": {
+            "type": "open_goal",
+            "params": {
+              "goalId": "{{goal.id}}"
+            }
+          },
+          "child": {
+            "type": "column",
+            "gap": 8,
+            "children": [
+              {
+                "type": "row",
+                "align": "between",
+                "children": [
+                  {
+                    "type": "column",
+                    "gap": 2,
+                    "expand": true,
+                    "children": [
+                      {
+                        "type": "text",
+                        "style": "subtitle",
+                        "value": "{{goal.title}}",
+                        "maxLines": 1
+                      },
+                      {
+                        "type": "text",
+                        "style": "caption",
+                        "value": "{{state.progressLabel}}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "stat",
+                    "value": "{{state.streakLabel}}",
+                    "label": "Streak"
+                  }
+                ]
+              },
+              {
+                "type": "week_dots",
+                "days": "{{state.week}}"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "goal",
+      "schemaVersion": "1.0",
+      "id": "water",
+      "template": "water-look@1",
+      "title": "Drink water",
+      "accent": "#38bdf8",
+      "icon": "💧",
+      "data": {
+        "mode": "count",
+        "unit": "glasses",
+        "target": 8,
+        "period": "day"
+      }
+    }
+  ]
+}

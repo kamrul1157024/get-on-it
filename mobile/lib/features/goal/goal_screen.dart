@@ -31,8 +31,12 @@ class GoalScreen extends ConsumerWidget {
                 }
                 return;
               }
-              if (v == 'edit-ai') {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => AskAiScreen(goalId: goalId)));
+              if (v == 'edit-ai' || v == 'look-ai') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AskAiScreen(goalId: goalId, look: v == 'look-ai'),
+                  ),
+                );
                 return;
               }
               if (v != 'delete') return;
@@ -58,6 +62,7 @@ class GoalScreen extends ConsumerWidget {
                     ? const PopupMenuItem(value: 'reminders-off', child: Text('Turn reminders off'))
                     : PopupMenuItem(value: 'reminders-on', child: Text('Turn reminders on (${presetOf(view!.goal)})')),
               const PopupMenuItem(value: 'edit-ai', child: Text('Change plan with AI')),
+              const PopupMenuItem(value: 'look-ai', child: Text('Change the look with AI')),
               const PopupMenuItem(value: 'delete', child: Text('Delete goal')),
             ],
           ),

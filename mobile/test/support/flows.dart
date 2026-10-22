@@ -43,6 +43,22 @@ Future<void> settle(WidgetTester tester) async {
   );
 }
 
+/// Pumps until [f] finds something. Checking a plan reads the database and
+/// draws the preview; on a slow emulator that outlasts one settle, which only
+/// waits for frames, not for futures.
+Future<void> waitFor(WidgetTester tester, Finder f, {Duration timeout = const Duration(seconds: 15)}) async {
+  final live = tester.binding is LiveTestWidgetsFlutterBinding;
+  final end = DateTime.now().add(timeout);
+  var fakeElapsed = Duration.zero;
+  while (f.evaluate().isEmpty) {
+    if (live ? DateTime.now().isAfter(end) : fakeElapsed > timeout) break;
+    await tester.pump(const Duration(milliseconds: 100));
+    if (live) await Future<void>.delayed(const Duration(milliseconds: 100));
+    fakeElapsed += const Duration(milliseconds: 100);
+  }
+  await settle(tester);
+}
+
 /// Scrolls the first scrollable until [f] is built, for lazy lists.
 Future<void> _reveal(WidgetTester tester, Finder f) async {
   if (f.evaluate().isNotEmpty) return;
@@ -78,7 +94,18 @@ Future<void> pastePlan(WidgetTester tester, String json) async {
     await tapKey(tester, 'fab-import');
   }
   await tester.enterText(find.byKey(const ValueKey('import-text')), json);
+  await checkPlan(tester);
+}
+
+/// Taps "Check" and waits for its verdict: the errors or the import button.
+Future<void> checkPlan(WidgetTester tester) async {
   await tapKey(tester, 'import-check');
+  await waitFor(
+    tester,
+    find.byWidgetPredicate(
+      (w) => w.key == const ValueKey('import-errors') || w.key == const ValueKey('import-confirm'),
+    ),
+  );
 }
 
 Future<void> importPlan(WidgetTester tester, String json) async {
@@ -190,6 +217,86 @@ Future<void> invalidPlanFlow(WidgetTester tester) async {
   expect(find.byKey(const ValueKey('import-errors')), findsOneWidget);
   expect(find.textContaining('data.items'), findsOneWidget);
   expect(find.byKey(const ValueKey('import-confirm')), findsNothing);
+  await goBack(tester);
+}
+
+/// A template-only bundle around [screen], for preview checks.
+String _bundle(Map<String, Object?> screen) => jsonEncode({
+  'kind': 'bundle',
+  'schemaVersion': '1.0',
+  'documents': [
+    {
+      'kind': 'template',
+      'id': 'probe',
+      'version': '1.0.0',
+      'engine': 'count',
+      'surfaces': {'screen': screen},
+    },
+    {
+      'kind': 'goal',
+      'id': 'probe-goal',
+      'template': 'probe@1',
+      'title': 'Probe',
+      'data': {'unit': 'reps', 'target': 3},
+    },
+  ],
+});
+
+/// The import preview draws the real screen and both widgets, blocks a plan
+/// whose layout fails, and copies a fix prompt for it and for warnings.
+Future<void> previewFlow(WidgetTester tester) async {
+  await pastePlan(tester, await rootBundle.loadString('assets/prompt/custom_example.json'));
+  await settle(tester);
+  final preview = find.byKey(const ValueKey('surface-preview:spanish-practice:screen'));
+  expect(find.descendant(of: preview, matching: find.text('Start a session')), findsOneWidget);
+  expect(find.byKey(const ValueKey('fix-with-ai')), findsNothing);
+  await tester.tap(find.text('Small'));
+  await settle(tester);
+  expect(
+    find.descendant(
+      of: find.byKey(const ValueKey('surface-preview:spanish-practice:tile')),
+      matching: find.text('0 / 4 sessions'),
+    ),
+    findsOneWidget,
+  );
+  expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNotNull);
+  await goBack(tester);
+
+  // A heatmap inside a grid cannot be measured: the layout fails. Flutter
+  // reports each failure; count them instead of failing the test on them.
+  final report = FlutterError.onError;
+  var layoutErrors = 0;
+  FlutterError.onError = (_) => layoutErrors++;
+  try {
+    await pastePlan(
+      tester,
+      _bundle({
+        'type': 'grid',
+        'children': [
+          {'type': 'heatmap', 'cells': '{{state.heatmap}}'},
+        ],
+      }),
+    );
+    await settle(tester);
+    expect(find.byKey(const ValueKey('surface-broken:probe-goal:screen')), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNull);
+    expect(find.text('Fix with AI'), findsOneWidget);
+    await tapKey(tester, 'fix-copy');
+    final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+    expect(copied, contains('screen: the goal screen failed to lay out'));
+    expect(copied, contains('"id":"probe"'));
+    await goBack(tester);
+  } finally {
+    FlutterError.onError = report;
+  }
+  expect(layoutErrors, greaterThan(0));
+
+  // A wrong binding is a warning: import still works, fixing is optional.
+  await pastePlan(tester, _bundle({'type': 'text', 'value': '{{state.nope}}'}));
+  await settle(tester);
+  expect(find.textContaining('the "count" engine has no "nope"'), findsWidgets);
+  expect(find.text('Fix the warnings with AI (optional)'), findsOneWidget);
+  expect(tester.widget<FilledButton>(find.byKey(const ValueKey('import-confirm'))).onPressed, isNotNull);
   await goBack(tester);
 }
 
@@ -363,6 +470,7 @@ Future<void> clipboardFlow(WidgetTester tester) async {
   await Clipboard.setData(ClipboardData(text: await sampleText('habit-water.getonit.json')));
   await tapKey(tester, 'empty-import');
   await tapText(tester, 'Paste');
+  await waitFor(tester, find.text('8 glasses per day'));
   expect(find.text('8 glasses per day'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
   expect(find.text('Drink water'), findsOneWidget);
@@ -371,9 +479,11 @@ Future<void> clipboardFlow(WidgetTester tester) async {
     tester,
     '{"kind":"goal","schemaVersion":"1.0","id":"x","template":"course@1","title":"T","data":{"items":[]}}',
   );
-  await tapText(tester, 'Copy for Claude');
-  final copied = await Clipboard.getData(Clipboard.kTextPlain);
-  expect(copied?.text, contains('data.items'));
+  await tapKey(tester, 'fix-copy');
+  final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+  expect(copied, contains('You fix plans'));
+  expect(copied, contains('data.items'));
+  expect(copied, contains('"id":"x"'));
   await goBack(tester);
 }
 
@@ -738,7 +848,7 @@ Future<void> askAiFlow(WidgetTester tester, Fakes fakes) async {
   await _snackGone(tester);
   await tapKey(tester, 'ask-import');
   await tester.enterText(find.byKey(const ValueKey('import-text')), answer);
-  await tapKey(tester, 'import-check');
+  await checkPlan(tester);
   expect(find.text('8 glasses per day'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
   expect(find.text('Drink water'), findsOneWidget);
@@ -766,11 +876,59 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   await _snackGone(tester);
   await tapKey(tester, 'ask-import');
   await tester.enterText(find.byKey(const ValueKey('import-text')), '```json\n${jsonEncode(doc)}\n```');
-  await tapKey(tester, 'import-check');
+  await checkPlan(tester);
   expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
   expect(find.textContaining('deadline 14 Jan'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
   await tapText(tester, 'Stanford CS229: Machine Learning');
+  expect(find.text('1 of 21 videos'), findsWidgets);
+
+  // Change only the look: the prompt has the plan and its template.
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Change the look with AI');
+  expect(find.text('Change the look with AI'), findsOneWidget);
+  await tapText(tester, 'Show my streak and the week on the medium widget');
+  await tapKey(tester, 'ask-copy');
+  final look = (await Clipboard.getData(Clipboard.kTextPlain))!.text!;
+  expect(look, contains('Change how one goal looks'));
+  expect(look, contains('Show my streak and the week on the medium widget'));
+  expect(look, contains('"engine": "video_series"'));
+  expect(look, contains('"deadline": "2027-01-14"'));
+
+  // The AI's answer: the course template under a new id, with a new line on
+  // top, and the same goal pointing at it. Progress stays.
+  final template = (jsonDecode(await rootBundle.loadString('assets/templates/course.json')) as Map)
+      .cast<String, Object?>();
+  template['id'] = 'stanford-cs229-look';
+  template['version'] = '1.0.0';
+  final screen = ((template['surfaces'] as Map)['screen'] as Map).cast<String, Object?>();
+  screen['children'] = [
+    {'type': 'text', 'style': 'title', 'value': 'My new look'},
+    ...(screen['children'] as List),
+  ];
+  doc['template'] = 'stanford-cs229-look@1';
+  await _snackGone(tester);
+  await tapKey(tester, 'ask-import');
+  await tester.enterText(
+    find.byKey(const ValueKey('import-text')),
+    jsonEncode({
+      'kind': 'bundle',
+      'schemaVersion': '1.0',
+      'documents': [template, doc],
+    }),
+  );
+  await checkPlan(tester);
+  expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
+  expect(
+    find.descendant(
+      of: find.byKey(const ValueKey('surface-preview:stanford-cs229:screen')),
+      matching: find.text('My new look'),
+    ),
+    findsOneWidget,
+  );
+  await tapKey(tester, 'import-confirm');
+  await tapText(tester, 'Stanford CS229: Machine Learning');
+  expect(find.text('My new look'), findsOneWidget);
   expect(find.text('1 of 21 videos'), findsWidgets);
   await goBack(tester);
 }

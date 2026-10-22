@@ -101,4 +101,5 @@ Composition:
 - Show the pace with a badge: {"type": "badge", "visible": "{{state.pace.label}}", "label": "{{state.pace.label}}", "tone": "{{state.pace.tone}}"}.
 - Use "visible" to show the right button for the state, for example a "Done for today" badge with "visible": "{{state.todayComplete}}".
 - Put the goal's own links and tips in "data" and bind them. Links must start with "https://".
+- Do not put a heatmap inside a grid: a grid row cannot measure it.
 - At most 20 levels deep and 500 nodes.

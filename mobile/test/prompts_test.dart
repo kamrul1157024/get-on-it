@@ -20,7 +20,7 @@ void main() {
   final today = DateTime(2026, 10, 21);
   // Bindings like {{state.count}} belong in the prompt; fill-in slots do not.
   final placeholder = RegExp(
-    r'\{\{(today|request|example|customExample|uiReference|goal|progress|currentTemplate)\}\}',
+    r'\{\{(today|request|example|customExample|uiReference|goal|progress|currentTemplate|problems|answer)\}\}',
   );
   final uiReference = File('assets/prompt/ui_reference.md').readAsStringSync();
 
@@ -96,6 +96,46 @@ void main() {
     expect(prompt, contains('# Custom look'));
     expect(prompt, isNot(contains(placeholder)));
     // The plan inside the prompt is a valid document on its own.
+    expect(parseImport(prompt, (r) => templates[r]).ok, true);
+  });
+
+  test('the fix prompt has the problems, the answer, and the keep-the-ids rule', () {
+    final prompt = fillFixPrompt(
+      template: File('assets/prompt/fix_prompt.md').readAsStringSync(),
+      uiReference: uiReference,
+      problems: ['data.items: required', 'surfaces.tile.children[0]: "heatmap" does not show on home-screen widgets'],
+      answer: 'Here is your plan: {"kind":"goal","id":"x"}',
+      today: today,
+    );
+    expect(prompt, contains('- data.items: required'));
+    expect(prompt, contains('- surfaces.tile.children[0]'));
+    expect(prompt, contains('{"kind":"goal","id":"x"}'));
+    expect(prompt, contains('Keep every "id"'));
+    expect(prompt, contains('# Custom look'));
+    expect(prompt, isNot(contains(placeholder)));
+  });
+
+  test('the look prompt has the goal and its template, and keeps the plan', () {
+    final goal = GoalDoc(readJson('assets/samples/habit-water.getonit.json'));
+    final view = GoalView(
+      goal: goal,
+      template: templates['habit@1'],
+      state: const {},
+      createdAt: DateTime(2026, 10, 1),
+    );
+    final prompt = fillLookPrompt(
+      template: File('assets/prompt/look_prompt.md').readAsStringSync(),
+      uiReference: uiReference,
+      view: view,
+      request: 'A big ring on the small widget',
+      today: today,
+    );
+    expect(prompt, contains('A big ring on the small widget'));
+    expect(prompt, contains('"engine": "by_mode"'));
+    expect(prompt, contains('use the goal\'s "data.mode"'));
+    expect(prompt, contains('# Custom look'));
+    expect(prompt, isNot(contains(placeholder)));
+    // The first code block is the goal itself, valid as it is.
     expect(parseImport(prompt, (r) => templates[r]).ok, true);
   });
 }

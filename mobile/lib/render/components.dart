@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/binding/resolver.dart';
+import 'layout_guard.dart';
 import 'renderer.dart';
 
 /// The component catalog. Spec §6.5. Keep in sync with `Capabilities.components`.
@@ -56,9 +57,12 @@ Widget _column(Map<String, Object?> n, RenderContext rc) {
   );
 }
 
-const _shrinkable = {'text', 'column', 'row', 'stat', 'badge', 'list', 'section'};
+// Parts with their own size. Every other child of a row gets a bounded
+// share of the width: an unbounded child (a full-width button, a card with a
+// row of its own, a checklist item) fails the layout of the whole screen.
+const _fixedSize = {'icon', 'image', 'progress_ring', 'media', 'counter', 'spacer'};
 
-// These fill the width they get, so a row must give them a bounded share.
+// These fill whatever width they get, so they take the free space.
 const _filling = {'progress_bar', 'number_input', 'week_dots', 'heatmap', 'grid'};
 
 Widget _row(Map<String, Object?> n, RenderContext rc) {
@@ -72,10 +76,10 @@ Widget _row(Map<String, Object?> n, RenderContext rc) {
       if (!c.containsKey('visible') || c.cast<String, Object?>().flag('visible', rc.scope))
         if (c['expand'] == true || _filling.contains(c['type']) || (c['type'] == 'button' && c['full'] == true))
           Expanded(child: buildNode(c, rc))
-        else if (_shrinkable.contains(c['type']))
-          Flexible(child: buildNode(c, rc))
+        else if (_fixedSize.contains(c['type']) || c['type'] == 'button')
+          buildNode(c, rc)
         else
-          buildNode(c, rc),
+          Flexible(child: buildNode(c, rc)),
   ];
   return Row(
     crossAxisAlignment: align == 'top' ? CrossAxisAlignment.start : CrossAxisAlignment.center,
@@ -119,6 +123,8 @@ Widget _card(Map<String, Object?> n, RenderContext rc) {
               body = InkWell(onTap: () => rc.dispatch(action), child: body);
             }
             final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(tile ? 16 : 20));
+            // A card that fails to lay out takes only itself down.
+            body = LayoutGuard(child: body);
             return switch (style) {
               'outlined' => Card.outlined(
                 margin: EdgeInsets.zero,

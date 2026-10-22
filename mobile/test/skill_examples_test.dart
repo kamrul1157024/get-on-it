@@ -40,6 +40,20 @@ void main() {
     expect(parsed.goals.single.templateRef, 'practice-sessions@1');
   });
 
+  test('the skill shares the UI reference and the custom example with the in-app prompts', () {
+    const shared = {
+      'assets/prompt/ui_reference.md': '$_skill/reference/ui.md',
+      'assets/prompt/custom_example.json': '$_skill/examples/custom-template-bundle.getonit.json',
+    };
+    for (final e in shared.entries) {
+      expect(
+        File(e.value).readAsStringSync(),
+        File(e.key).readAsStringSync(),
+        reason: '${e.value} differs. Run: python3 $_skill/scripts/sync_schemas.py',
+      );
+    }
+  });
+
   test('the skill template copies match the app templates', () {
     final app = {for (final f in _jsonFiles('assets/templates')) f.uri.pathSegments.last: _readJson(f)};
     final skill = {for (final f in _jsonFiles('$_skill/templates')) f.uri.pathSegments.last: _readJson(f)};

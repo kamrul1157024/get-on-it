@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:drift/drift.dart';
@@ -6,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:getonit/features/update/update_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:getonit/actions/action_router.dart';
 import 'package:getonit/app/app.dart';
 import 'package:getonit/app/providers.dart';
@@ -186,8 +190,29 @@ class Fakes {
   final nudges = FakeNudgeBridge();
   final widgets = FakeWidgetBridge();
   late final driveAccount = FakeDriveAccount(drive);
+  final updates = FakeUpdates();
 
   FakeVideo get video => videos.last;
+}
+
+/// GitHub's releases list and the installer, for the update flow. "dev" is
+/// what a debug build reports: no check on start.
+class FakeUpdates implements ApkInstaller {
+  String version = 'dev';
+  List<Map<String, Object?>> releases = const [];
+  int requests = 0;
+  final installed = <String>[];
+
+  http.Client get client => MockClient((req) async {
+    requests++;
+    return http.Response(jsonEncode(releases), 200);
+  });
+
+  @override
+  Future<void> install(String url, {void Function(double progress)? onProgress}) async {
+    onProgress?.call(1);
+    installed.add(url);
+  }
 }
 
 /// The whole app on a fresh in-memory database. Used by the host widget tests
@@ -207,6 +232,9 @@ Widget buildTestApp({
     if (fakes != null) ...[
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
+      installedVersionProvider.overrideWith((ref) => fakes.updates.version),
+      httpClientProvider.overrideWithValue(fakes.updates.client),
+      apkInstallerProvider.overrideWithValue(fakes.updates),
       reminderGatewayProvider.overrideWithValue(fakes.notifications),
       if (!realNudges) nudgeBridgeProvider.overrideWithValue(fakes.nudges),
       widgetBridgeProvider.overrideWithValue(fakes.widgets),

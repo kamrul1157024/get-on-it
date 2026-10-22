@@ -1,16 +1,23 @@
 package app.getonit.widget
 
 import android.content.ComponentName
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -27,6 +34,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
@@ -46,6 +54,28 @@ import org.json.JSONObject
  */
 object WidgetTree {
     /** Actions that only write data run in the background; the rest open the app. */
+    val defaultAccent = Color(0xFF7C5CFA)
+
+    /** A progress ring: a faint full circle and an arc from the top. */
+    fun ringBitmap(ctx: Context, sizeDp: Float, strokeDp: Float, value: Float, color: Int): Bitmap {
+        val d = ctx.resources.displayMetrics.density
+        val px = (sizeDp * d).toInt().coerceAtLeast(8)
+        val sw = strokeDp * d
+        val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val oval = RectF(sw / 2, sw / 2, px - sw / 2, px - sw / 2)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = sw
+            strokeCap = Paint.Cap.ROUND
+        }
+        paint.color = (color and 0x00FFFFFF) or (0x33 shl 24)
+        canvas.drawArc(oval, 0f, 360f, false, paint)
+        paint.color = color
+        if (value > 0f) canvas.drawArc(oval, -90f, 360f * value, false, paint)
+        return bmp
+    }
+
     private val dataActions = setOf("mark_done", "toggle_done", "log_progress")
 
     val jsonKey = ActionParameters.Key<String>("json")
@@ -80,7 +110,7 @@ class DataActionCallback : ActionCallback {
 }
 
 @Composable
-fun RenderNode(ctx: Context, node: JSONObject, accent: Color?) {
+fun RenderNode(ctx: Context, node: JSONObject, accent: Color?, root: Boolean = false) {
     val a = WidgetTree.parseColor(node.optString("accent", "").ifEmpty { null }) ?: accent
     val primary = a?.let { ColorProvider(it) } ?: GlanceTheme.colors.primary
     val onSurface = GlanceTheme.colors.onSurface
@@ -89,7 +119,14 @@ fun RenderNode(ctx: Context, node: JSONObject, accent: Color?) {
     fun GlanceModifier.onClick(): GlanceModifier = if (click != null) clickable(click) else this
 
     when (node.optString("type")) {
-        "column" -> Column(modifier = GlanceModifier.fillMaxWidth()) {
+        "column" -> Column(
+            modifier = GlanceModifier.fillMaxWidth(),
+            horizontalAlignment = when (node.optString("align")) {
+                "center" -> Alignment.CenterHorizontally
+                "end" -> Alignment.End
+                else -> Alignment.Start
+            },
+        ) {
             val gap = node.optDouble("gap", 0.0).dp
             node.optJSONArray("children").let { with(WidgetTree) { it.nodes() } }.forEachIndexed { i, c ->
                 if (i > 0 && gap > 0.dp) Spacer(GlanceModifier.height(gap))
@@ -114,12 +151,14 @@ fun RenderNode(ctx: Context, node: JSONObject, accent: Color?) {
                 }
             }
         }
+        // The card at the root of a goal widget fills it, content centred.
         "card" -> Box(
-            modifier = GlanceModifier.fillMaxWidth()
+            modifier = (if (root) GlanceModifier.fillMaxSize() else GlanceModifier.fillMaxWidth())
                 .background(a?.let { ColorProvider(it.copy(alpha = 0.16f)) } ?: GlanceTheme.colors.secondaryContainer)
                 .cornerRadius(16.dp)
                 .padding(if (node.optString("style") == "tile") 10.dp else 12.dp)
                 .onClick(),
+            contentAlignment = if (root) Alignment.Center else Alignment.TopStart,
         ) { node.optJSONObject("child")?.let { RenderNode(ctx, it, a) } }
         "text" -> {
             val style = node.optString("style", "body")
@@ -159,18 +198,23 @@ fun RenderNode(ctx: Context, node: JSONObject, accent: Color?) {
             color = primary,
             backgroundColor = GlanceTheme.colors.surfaceVariant,
         )
-        // Glance has no determinate ring; a label over a short bar says the same.
-        "progress_ring" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val label = node.optString("label")
-            if (label.isNotEmpty()) Text(label, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = onSurface))
-            val sub = node.optString("sublabel")
-            if (sub.isNotEmpty()) Text(sub, style = TextStyle(fontSize = 10.sp, color = muted))
-            LinearProgressIndicator(
-                progress = node.optDouble("value", 0.0).toFloat().coerceIn(0f, 1f),
-                modifier = GlanceModifier.width(node.optDouble("size", 56.0).dp).height(5.dp),
-                color = primary,
-                backgroundColor = GlanceTheme.colors.surfaceVariant,
-            )
+        // Glance has no determinate ring, so the ring is drawn into a bitmap
+        // and the labels sit on top of it.
+        "progress_ring" -> {
+            val size = node.optDouble("size", 56.0).toFloat().coerceIn(24f, 160f)
+            val stroke = node.optDouble("stroke", 6.0).toFloat().coerceIn(2f, size / 4)
+            val value = node.optDouble("value", 0.0).toFloat().coerceIn(0f, 1f)
+            val ring = WidgetTree.ringBitmap(ctx, size, stroke, value, (a ?: WidgetTree.defaultAccent).toArgb())
+            Box(modifier = GlanceModifier.size(size.dp), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(ring), contentDescription = null, modifier = GlanceModifier.size(size.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val label = node.optString("label")
+                    val big = if (size >= 80f) 16.sp else 13.sp
+                    if (label.isNotEmpty()) Text(label, style = TextStyle(fontSize = big, fontWeight = FontWeight.Bold, color = onSurface))
+                    val sub = node.optString("sublabel")
+                    if (sub.isNotEmpty()) Text(sub, style = TextStyle(fontSize = 10.sp, color = muted))
+                }
+            }
         }
         "media" -> {
             val w = node.optDouble("width", 48.0).dp
@@ -245,11 +289,14 @@ fun RenderNode(ctx: Context, node: JSONObject, accent: Color?) {
 fun WidgetFrame(ctx: Context, tree: JSONObject?, empty: String) {
     GlanceTheme {
         Scaffold(backgroundColor = GlanceTheme.colors.widgetBackground, horizontalPadding = 12.dp) {
-            Column(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 12.dp)) {
+            Box(
+                modifier = GlanceModifier.fillMaxSize().padding(vertical = 12.dp),
+                contentAlignment = if (tree?.optString("type") == "card") Alignment.Center else Alignment.TopStart,
+            ) {
                 if (tree == null) {
                     Text(empty, style = TextStyle(fontSize = 14.sp, color = GlanceTheme.colors.onSurface))
                 } else {
-                    RenderNode(ctx, tree, null)
+                    RenderNode(ctx, tree, null, root = true)
                 }
             }
         }
