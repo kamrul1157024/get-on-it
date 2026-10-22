@@ -36,15 +36,17 @@ Use a built-in template whenever one fits. The app already has them.
 
 The data rules for each template are in `templates/<name>.json` under `dataSchema`.
 
-Make a custom template only when no built-in template fits (for example, the user wants a button that opens a practice website). Then output a bundle with the template and the goal, like `examples/custom-template-bundle.getonit.json`:
+Make a custom template when no built-in template fits, or when the user asks for a special goal screen or home-screen widget (for example, a button that opens a practice website, or a widget that adds a set with one tap). Then output a bundle with the template and the goal, like `examples/custom-template-bundle.getonit.json`.
 
-- Use engine `count`, `check`, `checklist`, `page_range`, or `video_series`.
-- Use only these components: column, row, card, grid, list, section, divider, spacer, text, icon, image, badge, stat, progress_bar, progress_ring, week_dots, heatmap, media, button, checklist_item, counter, number_input, embed.
-- Use only these actions: open_goal, open_video, open_external, open_pdf_page, link_file, mark_done, toggle_done, log_progress, notify.
-- Surfaces: `screen` (required), `tile`, `tile_wide`.
-- Bindings are paths only, like `{{state.count}}`, `{{data.practiceUrl}}`, `{{goal.title}}`. No math, no logic. Read the built-in templates to see which `state` keys each engine gives.
+Read `reference/ui.md` before you write a template. It is the same reference the app's copy-paste prompts use. It lists the surfaces (`screen`, `tile` for the small widget, `tile_wide` for the medium widget), the bindings, the `state` keys of each engine, every component and action, and what home-screen widgets cannot draw. In short:
+
+- Use engine `count`, `check`, `checklist`, `page_range`, or `video_series`, and give the goal the data fields that the engine reads.
+- Use only the components and actions in `reference/ui.md`. Always add `tile` and `tile_wide`.
+- Bindings are paths only, like `{{state.count}}`, `{{data.practiceUrl}}`, `{{goal.title}}`. No math, no logic.
 - Links must start with `https://`.
 - Give the template its own id. Do not reuse `course`, `book`, or `habit`.
+
+The app checks bindings and widget parts when it imports the plan and shows a preview. If it reports a problem, the user can paste it back to you.
 
 ## 3. Fill in the goal
 

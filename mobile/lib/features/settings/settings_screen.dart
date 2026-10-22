@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../update/update_dialog.dart';
 import '../../app/providers.dart';
 import '../../core/schema/capabilities.dart';
 import '../../core/time/day_clock.dart';
@@ -56,6 +57,15 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const ListTile(title: Text('Version'), subtitle: Text(appVersion)),
+          Consumer(
+            builder: (context, ref, _) => ListTile(
+              key: const ValueKey('settings-check-update'),
+              leading: const Icon(Icons.system_update),
+              title: const Text('Check for updates'),
+              subtitle: const Text('Get the newest version from GitHub'),
+              onTap: () => checkForUpdateNow(context, ref),
+            ),
+          ),
         ],
       ),
     );

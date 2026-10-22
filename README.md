@@ -100,10 +100,8 @@ codex exec --sandbox workspace-write '$getonit-planner Make a Get On It plan to 
 
 Scan the QR code at the top with your Android phone, or open the link. It downloads `getonit.apk` from the latest release.
 
-
 [Download getonit.apk](https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk)
 
-- The repository is private. The link works only for GitHub accounts that have access to it, and you must be signed in to GitHub in the phone's browser.
 - Android asks you to allow installs from your browser the first time.
 - You can also build the APK yourself (see below).
 

@@ -1,97 +1,340 @@
 {
-  "kind": "bundle",
-  "schemaVersion": "1.0",
-  "documents": [
-    {
-      "kind": "template",
-      "id": "practice-sessions",
-      "version": "1.0.0",
-      "title": "Practice Sessions",
-      "description": "Count practice sessions toward a weekly target, with a button that opens the practice site.",
-      "engine": "count",
-      "dataSchema": {
-        "type": "object",
-        "required": ["target", "unit", "practiceUrl"],
-        "properties": {
-          "unit": { "type": "string", "minLength": 1 },
-          "target": { "type": "integer", "minimum": 1 },
-          "period": { "enum": ["day", "week"] },
-          "practiceUrl": { "type": "string", "pattern": "^https://" },
-          "tip": { "type": "string" }
-        }
-      },
-      "surfaces": {
-        "screen": {
-          "type": "column", "gap": 16, "children": [
-            {
-              "type": "card", "id": "sessions",
-              "child": { "type": "row", "gap": 16, "children": [
-                { "type": "progress_ring", "value": "{{state.progress}}", "size": 96, "stroke": 10,
-                  "label": "{{state.count}}", "sublabel": "of {{state.target}}" },
-                { "type": "column", "gap": 4, "expand": true, "children": [
-                  { "type": "text", "style": "title", "value": "{{goal.title}}" },
-                  { "type": "text", "style": "caption", "value": "{{state.label}} {{state.periodLabel}}" },
-                  { "type": "text", "style": "caption", "visible": "{{data.tip}}", "value": "{{data.tip}}" }
-                ]},
-                { "type": "counter",
-                  "decrement": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": -1 } },
-                  "increment": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": 1 } } }
-              ]}
-            },
-            { "type": "button", "variant": "filled", "full": true, "label": "Start a session",
-              "action": { "type": "open_external", "params": { "url": "{{data.practiceUrl}}" } } },
-            {
-              "type": "card", "id": "practice-stats",
-              "child": { "type": "column", "gap": 14, "children": [
-                { "type": "row", "align": "between", "children": [
-                  { "type": "stat", "value": "{{state.streakLabel}}", "label": "Streak" },
-                  { "type": "stat", "value": "{{state.pctLabel}}", "label": "This week" }
-                ]},
-                { "type": "week_dots", "days": "{{state.week}}" }
-              ]}
-            },
-            { "type": "section", "title": "Last 12 weeks", "child": { "type": "heatmap", "cells": "{{state.heatmap}}" } }
-          ]
+ "kind": "bundle",
+ "schemaVersion": "1.0",
+ "documents": [
+  {
+   "kind": "template",
+   "id": "practice-sessions",
+   "version": "1.0.0",
+   "title": "Practice Sessions",
+   "description": "Count practice sessions toward a weekly target, with a button that opens the practice site.",
+   "engine": "count",
+   "dataSchema": {
+    "type": "object",
+    "required": [
+     "target",
+     "unit",
+     "practiceUrl"
+    ],
+    "properties": {
+     "unit": {
+      "type": "string",
+      "minLength": 1
+     },
+     "target": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "period": {
+      "enum": [
+       "day",
+       "week"
+      ]
+     },
+     "practiceUrl": {
+      "type": "string",
+      "pattern": "^https://"
+     },
+     "tip": {
+      "type": "string"
+     },
+     "links": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "title",
+        "url"
+       ],
+       "properties": {
+        "title": {
+         "type": "string"
         },
-        "tile": {
-          "type": "card", "style": "tile", "accent": "{{goal.accent}}",
-          "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
-          "child": { "type": "column", "gap": 6, "align": "center", "children": [
-            { "type": "progress_ring", "value": "{{state.progress}}", "size": 56, "stroke": 6, "label": "{{goal.icon}}" },
-            { "type": "text", "style": "caption", "value": "{{state.label}}", "maxLines": 1 }
-          ]}
-        },
-        "tile_wide": {
-          "type": "card", "accent": "{{goal.accent}}",
-          "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
-          "child": { "type": "row", "gap": 12, "children": [
-            { "type": "icon", "name": "{{goal.icon}}", "box": true },
-            { "type": "column", "gap": 2, "expand": true, "children": [
-              { "type": "text", "style": "subtitle", "value": "{{goal.title}}", "maxLines": 1 },
-              { "type": "text", "style": "caption", "value": "{{state.label}} {{state.periodLabel}}" }
-            ]},
-            { "type": "button", "variant": "tonal", "label": "Practice",
-              "action": { "type": "open_external", "params": { "url": "{{data.practiceUrl}}" } } }
-          ]}
+        "url": {
+         "type": "string",
+         "pattern": "^https://"
         }
+       }
       }
-    },
-    {
-      "kind": "goal",
-      "id": "spanish-practice",
-      "template": "practice-sessions@1",
-      "title": "Spanish practice",
-      "accent": "#c084fc",
-      "icon": "🗣️",
-      "schedule": { "days": ["mon", "tue", "thu", "fri", "sat"] },
-      "reminders": { "preset": "gentle", "time": "18:30" },
-      "data": {
-        "unit": "sessions",
-        "target": 4,
-        "period": "week",
-        "practiceUrl": "https://www.duolingo.com/learn",
-        "tip": "15 minutes is enough. Stop while it still feels easy."
-      }
+     }
     }
-  ]
+   },
+   "surfaces": {
+    "screen": {
+     "type": "column",
+     "gap": 16,
+     "children": [
+      {
+       "type": "card",
+       "id": "sessions",
+       "child": {
+        "type": "row",
+        "gap": 16,
+        "children": [
+         {
+          "type": "progress_ring",
+          "value": "{{state.progress}}",
+          "size": 96,
+          "stroke": 10,
+          "label": "{{state.count}}",
+          "sublabel": "of {{state.target}}"
+         },
+         {
+          "type": "column",
+          "gap": 4,
+          "expand": true,
+          "children": [
+           {
+            "type": "text",
+            "style": "title",
+            "value": "{{goal.title}}"
+           },
+           {
+            "type": "text",
+            "style": "caption",
+            "value": "{{state.label}} {{state.periodLabel}}"
+           },
+           {
+            "type": "text",
+            "style": "caption",
+            "visible": "{{data.tip}}",
+            "value": "{{data.tip}}"
+           },
+           {
+            "type": "row",
+            "gap": 6,
+            "children": [
+             {
+              "type": "badge",
+              "visible": "{{state.pace.label}}",
+              "label": "{{state.pace.label}}",
+              "tone": "{{state.pace.tone}}"
+             },
+             {
+              "type": "badge",
+              "visible": "{{state.todayComplete}}",
+              "label": "Done for today",
+              "tone": "success"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "type": "counter",
+          "decrement": {
+           "type": "log_progress",
+           "params": {
+            "goalId": "{{goal.id}}",
+            "delta": -1
+           }
+          },
+          "increment": {
+           "type": "log_progress",
+           "params": {
+            "goalId": "{{goal.id}}",
+            "delta": 1
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "type": "button",
+       "variant": "filled",
+       "full": true,
+       "label": "Start a session",
+       "action": {
+        "type": "open_external",
+        "params": {
+         "url": "{{data.practiceUrl}}"
+        }
+       }
+      },
+      {
+       "type": "card",
+       "id": "practice-stats",
+       "child": {
+        "type": "column",
+        "gap": 14,
+        "children": [
+         {
+          "type": "row",
+          "align": "between",
+          "children": [
+           {
+            "type": "stat",
+            "value": "{{state.streakLabel}}",
+            "label": "Streak"
+           },
+           {
+            "type": "stat",
+            "value": "{{state.pctLabel}}",
+            "label": "This week"
+           }
+          ]
+         },
+         {
+          "type": "week_dots",
+          "days": "{{state.week}}"
+         }
+        ]
+       }
+      },
+      {
+       "type": "section",
+       "title": "Resources",
+       "visible": "{{data.links}}",
+       "child": {
+        "type": "list",
+        "items": "{{data.links}}",
+        "as": "link",
+        "gap": 4,
+        "item": {
+         "type": "button",
+         "variant": "text",
+         "icon": "🔗",
+         "label": "{{link.title}}",
+         "action": {
+          "type": "open_external",
+          "params": {
+           "url": "{{link.url}}"
+          }
+         }
+        }
+       }
+      },
+      {
+       "type": "section",
+       "title": "Last 12 weeks",
+       "child": {
+        "type": "heatmap",
+        "cells": "{{state.heatmap}}"
+       }
+      }
+     ]
+    },
+    "tile": {
+     "type": "card",
+     "style": "tile",
+     "accent": "{{goal.accent}}",
+     "action": {
+      "type": "open_goal",
+      "params": {
+       "goalId": "{{goal.id}}"
+      }
+     },
+     "child": {
+      "type": "column",
+      "gap": 6,
+      "align": "center",
+      "children": [
+       {
+        "type": "progress_ring",
+        "value": "{{state.progress}}",
+        "size": 56,
+        "stroke": 6,
+        "label": "{{goal.icon}}"
+       },
+       {
+        "type": "text",
+        "style": "caption",
+        "value": "{{state.label}}",
+        "maxLines": 1
+       }
+      ]
+     }
+    },
+    "tile_wide": {
+     "type": "card",
+     "accent": "{{goal.accent}}",
+     "action": {
+      "type": "open_goal",
+      "params": {
+       "goalId": "{{goal.id}}"
+      }
+     },
+     "child": {
+      "type": "row",
+      "gap": 12,
+      "children": [
+       {
+        "type": "icon",
+        "name": "{{goal.icon}}",
+        "box": true
+       },
+       {
+        "type": "column",
+        "gap": 2,
+        "expand": true,
+        "children": [
+         {
+          "type": "text",
+          "style": "subtitle",
+          "value": "{{goal.title}}",
+          "maxLines": 1
+         },
+         {
+          "type": "text",
+          "style": "caption",
+          "value": "{{state.label}} {{state.periodLabel}}"
+         }
+        ]
+       },
+       {
+        "type": "button",
+        "variant": "tonal",
+        "label": "Practice",
+        "action": {
+         "type": "open_external",
+         "params": {
+          "url": "{{data.practiceUrl}}"
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "kind": "goal",
+   "id": "spanish-practice",
+   "template": "practice-sessions@1",
+   "title": "Spanish practice",
+   "accent": "#c084fc",
+   "icon": "🗣️",
+   "schedule": {
+    "days": [
+     "mon",
+     "tue",
+     "thu",
+     "fri",
+     "sat"
+    ]
+   },
+   "reminders": {
+    "preset": "gentle",
+    "time": "18:30"
+   },
+   "data": {
+    "unit": "sessions",
+    "target": 4,
+    "period": "week",
+    "practiceUrl": "https://www.duolingo.com/learn",
+    "tip": "15 minutes is enough. Stop while it still feels easy.",
+    "links": [
+     {
+      "title": "Conjugation drills",
+      "url": "https://www.spanishdict.com/conjugation"
+     },
+     {
+      "title": "Easy Spanish on YouTube",
+      "url": "https://www.youtube.com/@EasySpanish"
+     }
+    ]
+   }
+  }
+ ]
 }

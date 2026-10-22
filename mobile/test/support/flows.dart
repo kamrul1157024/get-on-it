@@ -854,6 +854,54 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   await tapKey(tester, 'import-confirm');
   await tapText(tester, 'Stanford CS229: Machine Learning');
   expect(find.text('1 of 21 videos'), findsWidgets);
+
+  // Change only the look: the prompt has the plan and its template.
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Change the look with AI');
+  expect(find.text('Change the look with AI'), findsOneWidget);
+  await tapText(tester, 'Show my streak and the week on the medium widget');
+  await tapKey(tester, 'ask-copy');
+  final look = (await Clipboard.getData(Clipboard.kTextPlain))!.text!;
+  expect(look, contains('Change how one goal looks'));
+  expect(look, contains('Show my streak and the week on the medium widget'));
+  expect(look, contains('"engine": "video_series"'));
+  expect(look, contains('"deadline": "2027-01-14"'));
+
+  // The AI's answer: the course template under a new id, with a new line on
+  // top, and the same goal pointing at it. Progress stays.
+  final template = (jsonDecode(await rootBundle.loadString('assets/templates/course.json')) as Map)
+      .cast<String, Object?>();
+  template['id'] = 'stanford-cs229-look';
+  template['version'] = '1.0.0';
+  final screen = ((template['surfaces'] as Map)['screen'] as Map).cast<String, Object?>();
+  screen['children'] = [
+    {'type': 'text', 'style': 'title', 'value': 'My new look'},
+    ...(screen['children'] as List),
+  ];
+  doc['template'] = 'stanford-cs229-look@1';
+  await _snackGone(tester);
+  await tapKey(tester, 'ask-import');
+  await tester.enterText(
+    find.byKey(const ValueKey('import-text')),
+    jsonEncode({
+      'kind': 'bundle',
+      'schemaVersion': '1.0',
+      'documents': [template, doc],
+    }),
+  );
+  await tapKey(tester, 'import-check');
+  expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
+  expect(
+    find.descendant(
+      of: find.byKey(const ValueKey('surface-preview:stanford-cs229:screen')),
+      matching: find.text('My new look'),
+    ),
+    findsOneWidget,
+  );
+  await tapKey(tester, 'import-confirm');
+  await tapText(tester, 'Stanford CS229: Machine Learning');
+  expect(find.text('My new look'), findsOneWidget);
+  expect(find.text('1 of 21 videos'), findsWidgets);
   await goBack(tester);
 }
 

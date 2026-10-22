@@ -43,6 +43,24 @@ String fillEditPrompt({
       request.trim().isEmpty ? 'Look at my progress and suggest a better plan.' : request.trim(),
     );
 
+/// Fills the look prompt (assets/prompt/look_prompt.md): a new screen and
+/// widgets for one goal, with the plan left as it is.
+String fillLookPrompt({
+  required String template,
+  required String uiReference,
+  required GoalView view,
+  required String request,
+  required DateTime today,
+}) => template
+    .replaceAll('{{uiReference}}', uiReference.trim())
+    .replaceAll('{{currentTemplate}}', const JsonEncoder.withIndent('  ').convert(view.template?.json ?? const {}))
+    .replaceAll('{{goal}}', const JsonEncoder.withIndent('  ').convert(view.goal.json))
+    .replaceAll('{{today}}', DateFormat('yyyy-MM-dd (EEEE)').format(today))
+    .replaceAll(
+      '{{request}}',
+      request.trim().isEmpty ? 'Make the screen and both widgets clearer and more motivating.' : request.trim(),
+    );
+
 /// Fills the fix prompt (assets/prompt/fix_prompt.md): the problems the app
 /// found and the answer that has them.
 String fillFixPrompt({
@@ -91,11 +109,13 @@ Future<String> buildPlanPrompt(String request, DateTime today) async => fillPlan
 
 /// Make or change a plan without installing anything: describe the goal or
 /// the change, copy the prompt into Claude or ChatGPT, paste the answer back.
-/// With [goalId], the prompt is for changing that goal.
+/// With [goalId], the prompt is for changing that goal; with [look] too, for
+/// changing only how it looks.
 class AskAiScreen extends ConsumerStatefulWidget {
-  const AskAiScreen({super.key, this.goalId});
+  const AskAiScreen({super.key, this.goalId, this.look = false});
 
   final String? goalId;
+  final bool look;
 
   @override
   ConsumerState<AskAiScreen> createState() => _AskAiScreenState();
@@ -109,6 +129,13 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     'Move the deadline two weeks later',
     'Only 2 days a week from now on',
     'Make the reminders stronger',
+  ];
+
+  static const _lookIdeas = [
+    'A big progress ring and one big button on the small widget',
+    'Show my streak and the week on the medium widget',
+    'Add a section with useful links and tips',
+    'A calmer screen: fewer stats, today first',
   ];
 
   static const _ideas = [
@@ -127,11 +154,20 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
   Future<void> _copy({Uri? open}) async {
     final today = ref.read(wallClockProvider)();
     final view = widget.goalId == null ? null : ref.read(goalViewProvider(widget.goalId!));
+    final uiReference = await rootBundle.loadString('assets/prompt/ui_reference.md');
     final prompt = view == null
         ? await buildPlanPrompt(_request.text, today)
+        : widget.look
+        ? fillLookPrompt(
+            template: await rootBundle.loadString('assets/prompt/look_prompt.md'),
+            uiReference: uiReference,
+            view: view,
+            request: _request.text,
+            today: today,
+          )
         : fillEditPrompt(
             template: await rootBundle.loadString('assets/prompt/edit_prompt.md'),
-            uiReference: await rootBundle.loadString('assets/prompt/ui_reference.md'),
+            uiReference: uiReference,
             view: view,
             request: _request.text,
             today: today,
@@ -151,14 +187,23 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     final editing = widget.goalId != null;
     final title = editing ? ref.watch(goalViewProvider(widget.goalId!))?.goal.title : null;
     return Scaffold(
-      appBar: AppBar(title: Text(editing ? 'Change this plan with AI' : 'Make a plan with AI')),
+      appBar: AppBar(
+        title: Text(
+          widget.look ? 'Change the look with AI' : (editing ? 'Change this plan with AI' : 'Make a plan with AI'),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (title != null) ...[Text(title, style: t.titleLarge), const SizedBox(height: 12)],
-            Text(editing ? '1. Say what should change.' : '1. Say what you want to do.', style: t.titleMedium),
+            Text(
+              widget.look
+                  ? '1. Say how the screen and widgets should look.'
+                  : (editing ? '1. Say what should change.' : '1. Say what you want to do.'),
+              style: t.titleMedium,
+            ),
             const SizedBox(height: 8),
             TextField(
               key: const ValueKey('ask-request'),
@@ -167,7 +212,9 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
               maxLines: 5,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
-                hintText: editing
+                hintText: widget.look
+                    ? 'For example: a quick +1 button on the small widget'
+                    : editing
                     ? 'For example: I missed a week. Give me a new pace.'
                     : 'For example: read 2 pages of a book every day',
               ),
@@ -177,7 +224,7 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
               spacing: 8,
               runSpacing: 4,
               children: [
-                for (final idea in editing ? _editIdeas : _ideas)
+                for (final idea in widget.look ? _lookIdeas : (editing ? _editIdeas : _ideas))
                   ActionChip(label: Text(idea, maxLines: 1), onPressed: () => setState(() => _request.text = idea)),
               ],
             ),
@@ -185,7 +232,11 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
             Text('2. Copy the prompt into an AI chat.', style: t.titleMedium),
             const SizedBox(height: 4),
             Text(
-              editing ? 'The prompt holds your current plan and progress, and asks the AI to keep your progress.' : 'The prompt tells the AI exactly what Get On It can import. It works with Claude, ChatGPT and other chat apps.',
+              widget.look
+                  ? 'The prompt holds your plan and its current design. The AI changes only the design; your plan and progress stay.'
+                  : editing
+                  ? 'The prompt holds your current plan and progress, and asks the AI to keep your progress.'
+                  : 'The prompt tells the AI exactly what Get On It can import. It works with Claude, ChatGPT and other chat apps.',
               style: t.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -223,7 +274,11 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
               onPressed: () =>
                   Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ImportScreen())),
               icon: const Icon(Icons.content_paste),
-              label: Text(editing ? 'I have the answer: update the plan' : 'I have the answer: import it'),
+              label: Text(
+                widget.look
+                    ? 'I have the answer: apply the new look'
+                    : (editing ? 'I have the answer: update the plan' : 'I have the answer: import it'),
+              ),
             ),
           ],
         ),

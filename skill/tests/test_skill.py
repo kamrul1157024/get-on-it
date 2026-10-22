@@ -101,8 +101,9 @@ class BrokenDocsTest(unittest.TestCase):
 
     def test_unknown_component_in_custom_template(self):
         doc = self.example("custom-template-bundle.getonit.json")
-        doc["documents"][0]["surfaces"]["screen"]["children"].append({"type": "rep_tracker"})
-        self.assert_fails(doc, "documents[0].surfaces.screen.children[4].type:")
+        children = doc["documents"][0]["surfaces"]["screen"]["children"]
+        children.append({"type": "rep_tracker"})
+        self.assert_fails(doc, f"documents[0].surfaces.screen.children[{len(children) - 1}].type:")
 
     def test_custom_template_data_is_checked(self):
         doc = self.example("custom-template-bundle.getonit.json")

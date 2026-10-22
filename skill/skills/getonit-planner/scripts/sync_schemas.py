@@ -9,6 +9,8 @@ Usage:
 2. Rewrites the generated parts of schema/goal.schema.json: one
    `$defs/data-<id>-<major>` per template (its dataSchema) and the
    `$defs/goal/allOf` if/then list that picks it by `template`.
+3. Copies the app's UI reference and custom-template example (shared with
+   the in-app prompts) to reference/ui.md and examples/.
 
 With --check nothing is written. The exit code is 1 when something is out of
 sync. Standard library only.
@@ -23,6 +25,13 @@ SKILL = Path(__file__).resolve().parent.parent
 TEMPLATES = SKILL / "templates"
 GOAL_SCHEMA = SKILL / "schema" / "goal.schema.json"
 APP_TEMPLATES = SKILL.parents[2] / "mobile" / "assets" / "templates"
+APP_PROMPT = SKILL.parents[2] / "mobile" / "assets" / "prompt"
+# The app's copy-paste prompts and the skill share one UI reference and one
+# custom-template example; the app's files are the source.
+SHARED = {
+    "ui_reference.md": "reference/ui.md",
+    "custom_example.json": "examples/custom-template-bundle.getonit.json",
+}
 
 
 def load(path):
@@ -66,6 +75,16 @@ def main(argv=None):
             if not dest.exists() or load(dest) != json.loads(text):
                 stale.append(f"templates/{f.name}")
                 if not args.check:
+                    dest.write_text(text, encoding="utf-8")
+
+    if APP_PROMPT.is_dir():
+        for name, rel in SHARED.items():
+            text = (APP_PROMPT / name).read_text(encoding="utf-8")
+            dest = SKILL / rel
+            if not dest.exists() or dest.read_text(encoding="utf-8") != text:
+                stale.append(rel)
+                if not args.check:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_text(text, encoding="utf-8")
 
     schema = load(GOAL_SCHEMA)
