@@ -71,6 +71,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _check() async {
+    // A plan shared while the app starts can arrive before the built-in
+    // templates are installed.
+    await ref.read(bootstrapProvider.future);
     final repo = ref.read(repositoryProvider);
     final installed = await repo.templates();
     final parsed = parseImport(_text.text, (ref) => installed[ref]);
