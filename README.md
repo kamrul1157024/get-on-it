@@ -29,7 +29,7 @@ Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Cl
 - **Home-screen widgets.** A **Today** widget and a **Goal** widget. Buttons such as **+1** and **Done** work without opening the app.
 - **Reminders that push.** Notifications, sticky reminders, full-screen alarms, and strict alarms that ring until you make progress. You approve every reminder.
 - **Distraction nudges.** A short reminder of your goal when you unlock the phone or spend too long in an app that you choose.
-- **Google Drive backup.** Optional. The app can only see its own folder.
+- **Backup to your Google account.** Android backs up your goals and progress. A new phone gets them back. No setup.
 - **Updates in the app.** When a new release is out, the app shows what changed and installs it for you.
 
 ## Screenshots
@@ -127,6 +127,7 @@ CI runs all of these, including the e2e suite on an Android emulator. Releases: 
 
 - [Technical specification](docs/tech-spec.md)
 - [Skill and plugin installation](docs/skill-install.md)
-- [Google Drive setup](docs/drive.md)
+- [Backup](docs/backup.md)
+- [Google Drive setup (optional)](docs/drive.md)
 - [Release process](docs/release.md)
 - [Sample UI cards](mockups/cards.html). Open the file in a browser. A small JavaScript reference renderer draws each card from its JSON.

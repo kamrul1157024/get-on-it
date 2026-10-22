@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and lower. Only the database holds the user's data: goals,
+     templates, progress events, and settings. Everything else is rebuilt on
+     start (reminders, widgets, the nudge service's copy) or is a cache, such
+     as downloaded update APKs. -->
+<full-backup-content>
+    <include domain="root" path="app_flutter/getonit.sqlite" />
+    <include domain="root" path="app_flutter/getonit.sqlite-wal" />
+    <include domain="root" path="app_flutter/getonit.sqlite-shm" />
+</full-backup-content>

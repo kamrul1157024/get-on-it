@@ -45,7 +45,10 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           const _NudgesSection(),
           const Divider(),
-          const _DriveSection(),
+          Consumer(
+            builder: (context, ref, _) =>
+                ref.watch(driveConfiguredProvider) ? const _DriveSection() : const _BackupSection(),
+          ),
           const Divider(),
           const ListTile(title: Text('Version'), subtitle: Text(appVersion)),
           Consumer(
@@ -73,6 +76,41 @@ class SettingsScreen extends ConsumerWidget {
               Clipboard.setData(ClipboardData(text: json));
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Android's own backup to the user's Google account
+/// (res/xml/data_extraction_rules.xml): the database, about once a day.
+class _BackupSection extends ConsumerWidget {
+  const _BackupSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      key: const ValueKey('backup-section'),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Backup', style: t.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Android backs up your goals and progress to your Google account about once a day, while the phone '
+            'charges on Wi-Fi. They come back when you set up a new phone or reinstall the app with the same '
+            'Google account.',
+            style: t.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const ValueKey('backup-open-settings'),
+            onPressed: () => ref.read(openBackupSettingsProvider)(),
+            icon: const Icon(Icons.settings_backup_restore),
+            label: const Text('Open backup settings'),
           ),
         ],
       ),

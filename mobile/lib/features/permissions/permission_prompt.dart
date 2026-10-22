@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../app/providers.dart';
 import '../nudges/nudges.dart';
@@ -76,7 +79,35 @@ final appPermissionsProvider = Provider<List<AppPermission>>((ref) {
 /// Off in tests, which start with no permissions and would all see the popup.
 final permissionPromptEnabledProvider = Provider<bool>((ref) => true);
 
-const _shownKey = 'permissions.shown';
+/// The permissions the popup has shown, on this phone only. Not in the
+/// database: Android's backup restores the database on a new phone, but not
+/// the permissions, so a restored list would keep the popup from asking.
+abstract class ShownPermissions {
+  Future<Set<String>> read();
+
+  Future<void> write(Set<String> ids);
+}
+
+/// A file in the app support folder, which the backup rules leave out
+/// (res/xml/data_extraction_rules.xml).
+class FileShownPermissions implements ShownPermissions {
+  const FileShownPermissions();
+
+  Future<File> get _file async => File('${(await getApplicationSupportDirectory()).path}/permissions_shown.txt');
+
+  @override
+  Future<Set<String>> read() async {
+    final f = await _file;
+    if (!await f.exists()) return {};
+    return (await f.readAsString()).split(',').where((s) => s.isNotEmpty).toSet();
+  }
+
+  @override
+  Future<void> write(Set<String> ids) async => (await _file).writeAsString(ids.join(','));
+}
+
+final shownPermissionsProvider = Provider<ShownPermissions>((ref) => const FileShownPermissions());
+
 const _strengthAskedKey = 'setup.strengthAsked';
 
 /// First start: how hard to push, then the permissions it needs.
@@ -145,7 +176,8 @@ Future<void> askForPermissionsOnce(BuildContext context, WidgetRef ref) async {
   if (!ref.read(permissionPromptEnabledProvider)) return;
   final repo = ref.read(repositoryProvider);
   final settings = await repo.settings();
-  final shown = (settings[_shownKey] ?? '').split(',').where((s) => s.isNotEmpty).toSet();
+  final store = ref.read(shownPermissionsProvider);
+  final shown = await store.read();
   final missing = <AppPermission>[];
   for (final p in ref.read(appPermissionsProvider)) {
     if (shown.contains(p.id) || !(p.applies?.call(settings) ?? true)) continue;
@@ -157,7 +189,7 @@ Future<void> askForPermissionsOnce(BuildContext context, WidgetRef ref) async {
   }
   if (missing.isEmpty || !context.mounted) return;
   await showDialog<void>(context: context, builder: (_) => PermissionPrompt(missing));
-  await repo.setSetting(_shownKey, {...shown, ...missing.map((p) => p.id)}.join(','));
+  await store.write({...shown, ...missing.map((p) => p.id)});
   await ref.read(remindersProvider.notifier).refreshPermissions();
   ref.read(nudgesProvider.notifier).refreshStatus();
 }

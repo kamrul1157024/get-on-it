@@ -1,5 +1,7 @@
 # Google Drive backup: setup
 
+> **Optional.** By default the app uses Android's own backup to the Google account, with no setup: see [backup.md](backup.md). Follow this page only if you want the in-app Google Drive sign-in. Settings shows it only in a build that has `GOOGLE_SERVER_CLIENT_ID`.
+
 The app backs up goals, imported templates, progress events, and settings to a folder named **Get On It** in the user's Google Drive (spec §13). The app uses the `drive.file` scope. So it can see only the files that it created.
 
 Google sign-in on Android needs an OAuth client in a Google Cloud project. Without it, **Connect Google Drive** shows "Google Drive is not set up in this build".

@@ -85,6 +85,18 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "nudgeStatus" -> result.success(mapOf("running" to NudgeService.running, "usageAccess" to hasUsageAccess()))
+                // The phone's backup page (Google account backup). Names vary by
+                // maker, so the first one that the phone has wins.
+                "openBackupSettings" -> {
+                    val candidates = listOf(
+                        Intent("com.android.settings.BACKUP_SETTINGS"),
+                        Intent(Settings.ACTION_PRIVACY_SETTINGS),
+                        Intent(Settings.ACTION_SETTINGS),
+                    )
+                    val intent = candidates.first { it.resolveActivity(packageManager) != null }
+                    startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    result.success(null)
+                }
                 "openUsageAccessSettings" -> {
                     // Straight to this app's switch where the phone supports it.
                     val direct = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName"))

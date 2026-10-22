@@ -4,10 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../app/providers.dart';
+import '../reminders/gateway.dart' show systemChannel;
 import 'backup.dart';
 import 'drive_account.dart';
 
 final driveAccountProvider = Provider<DriveAccount>((ref) => GoogleDriveAccount());
+
+/// Whether this build can sign in to Google Drive. Without a Google Cloud
+/// client id (docs/drive.md), Settings shows Android's own backup instead.
+final driveConfiguredProvider = Provider<bool>((ref) => googleServerClientId.isNotEmpty);
+
+/// Opens the phone's backup settings. Tests use a fake.
+final openBackupSettingsProvider = Provider<Future<void> Function()>(
+  (ref) =>
+      () => systemChannel.invokeMethod<void>('openBackupSettings'),
+);
 
 /// Delay between the last change and the automatic backup. Spec §13.3.
 final autoBackupDelayProvider = Provider<Duration>((ref) => const Duration(seconds: 60));

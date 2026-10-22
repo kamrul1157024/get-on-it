@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and higher: the same files as backup_rules.xml, for the backup
+     to the Google account and for a transfer to a new phone. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="root" path="app_flutter/getonit.sqlite" />
+        <include domain="root" path="app_flutter/getonit.sqlite-wal" />
+        <include domain="root" path="app_flutter/getonit.sqlite-shm" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_flutter/getonit.sqlite" />
+        <include domain="root" path="app_flutter/getonit.sqlite-wal" />
+        <include domain="root" path="app_flutter/getonit.sqlite-shm" />
+    </device-transfer>
+</data-extraction-rules>

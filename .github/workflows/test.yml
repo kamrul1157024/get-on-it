@@ -121,6 +121,8 @@ jobs:
 
       - name: Run integration tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
+        # A hang at app start once held the job for over an hour.
+        timeout-minutes: 35
         with:
           api-level: 34
           target: google_apis
@@ -131,4 +133,17 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           working-directory: mobile
           # CI=true skips the test that needs the real YouTube player online.
-          script: flutter test integration_test -d emulator-5554 --reporter expanded --dart-define=CI=true
+          # Android keeps reconfiguring for a while after boot (keyboard
+          # layouts, Play services). An activity re-created in that window
+          # detaches the test from the app, which then waits forever; so the
+          # tests start after a pause. A run that hangs or fails leaves the
+          # device log for the next step.
+          script: sleep 60 && timeout 25m flutter test integration_test -d emulator-5554 --reporter expanded --dart-define=CI=true || (adb logcat -d > logcat.txt; exit 1)
+
+      - name: Upload the device log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logcat
+          path: mobile/logcat.txt
+          if-no-files-found: ignore

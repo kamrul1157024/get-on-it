@@ -99,11 +99,22 @@ void main() {
   testWidgets('a permission added in a later version shows on its own', (tester) async {
     await setUpApp(tester);
     await strengthDone();
-    await Repository(db).setSetting('permissions.shown', 'notifications,exactAlarms,fullScreen');
+    fakes.shownPermissions.ids = {'notifications', 'exactAlarms', 'fullScreen'};
     await open(tester);
     expect(prompt, findsOneWidget);
     expect(row('usageAccess'), findsOneWidget);
     expect(row('notifications'), findsNothing);
+    await tapKey(tester, 'permission-done');
+  });
+
+  testWidgets('a restored database does not stop the popup on a new phone', (tester) async {
+    // The database (with every setting) came back from Android's backup; the
+    // phone-only list of shown permissions did not.
+    await setUpApp(tester);
+    await strengthDone();
+    await Repository(db).setSetting('permissions.shown', 'notifications,exactAlarms,fullScreen,usageAccess');
+    await open(tester);
+    expect(prompt, findsOneWidget);
     await tapKey(tester, 'permission-done');
   });
 

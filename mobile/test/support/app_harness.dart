@@ -249,7 +249,25 @@ class Fakes {
   /// The first-start permission popup. Off unless a test is about it.
   bool permissionPrompt = false;
 
+  /// Builds with a Google Cloud client id show the Drive section; the drive
+  /// flow uses it with a fake account.
+  bool driveConfigured = true;
+  int backupSettingsOpened = 0;
+
+  /// What the permission popup has shown, kept across app restarts.
+  final shownPermissions = MemoryShownPermissions();
+
   FakeVideo get video => videos.last;
+}
+
+class MemoryShownPermissions implements ShownPermissions {
+  Set<String> ids = {};
+
+  @override
+  Future<Set<String>> read() async => {...ids};
+
+  @override
+  Future<void> write(Set<String> ids) async => this.ids = {...ids};
 }
 
 /// GitHub's releases list and the installer, for the update flow. "dev" is
@@ -308,6 +326,9 @@ Widget buildTestApp({
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       installedVersionProvider.overrideWith((ref) => fakes.updates.version),
       permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
+      driveConfiguredProvider.overrideWith((ref) => fakes.driveConfigured),
+      shownPermissionsProvider.overrideWithValue(fakes.shownPermissions),
+      openBackupSettingsProvider.overrideWithValue(() async => fakes.backupSettingsOpened++),
       httpClientProvider.overrideWithValue(fakes.updates.client),
       apkInstallerProvider.overrideWithValue(fakes.updates),
       updateDownloadsProvider.overrideWithValue(fakes.updates.downloads),
