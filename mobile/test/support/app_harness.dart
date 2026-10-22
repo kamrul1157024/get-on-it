@@ -249,6 +249,11 @@ class Fakes {
   /// The first-start permission popup. Off unless a test is about it.
   bool permissionPrompt = false;
 
+  /// Builds with a Google Cloud client id show the Drive section; the drive
+  /// flow uses it with a fake account.
+  bool driveConfigured = true;
+  int backupSettingsOpened = 0;
+
   FakeVideo get video => videos.last;
 }
 
@@ -308,6 +313,8 @@ Widget buildTestApp({
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       installedVersionProvider.overrideWith((ref) => fakes.updates.version),
       permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
+      driveConfiguredProvider.overrideWith((ref) => fakes.driveConfigured),
+      openBackupSettingsProvider.overrideWithValue(() async => fakes.backupSettingsOpened++),
       httpClientProvider.overrideWithValue(fakes.updates.client),
       apkInstallerProvider.overrideWithValue(fakes.updates),
       updateDownloadsProvider.overrideWithValue(fakes.updates.downloads),
