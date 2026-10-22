@@ -361,7 +361,12 @@ Future<void> timeLostFlow(WidgetTester tester, Fakes fakes) async {
   final courseHours = (units.first['wholeMinutes'] as num) / 60;
   final times = (96 * 60 / (courseHours * 60)).floor();
   expect(find.textContaining('or the whole course $times times'), findsOneWidget);
-  expect(find.text('Counted by Android, including time before you installed Get On It.'), findsOneWidget);
+  expect(
+    find.text(
+      'Counted by Android, including time before you installed Get On It. For older weeks it can be a little lower than your real use.',
+    ),
+    findsOneWidget,
+  );
   await tester.tap(find.text('This month'));
   await settle(tester);
   expect(find.text('50 h'), findsOneWidget);
