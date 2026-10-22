@@ -43,6 +43,22 @@ Future<void> settle(WidgetTester tester) async {
   );
 }
 
+/// Pumps until [f] finds something. Checking a plan reads the database and
+/// draws the preview; on a slow emulator that outlasts one settle, which only
+/// waits for frames, not for futures.
+Future<void> waitFor(WidgetTester tester, Finder f, {Duration timeout = const Duration(seconds: 15)}) async {
+  final live = tester.binding is LiveTestWidgetsFlutterBinding;
+  final end = DateTime.now().add(timeout);
+  var fakeElapsed = Duration.zero;
+  while (f.evaluate().isEmpty) {
+    if (live ? DateTime.now().isAfter(end) : fakeElapsed > timeout) break;
+    await tester.pump(const Duration(milliseconds: 100));
+    if (live) await Future<void>.delayed(const Duration(milliseconds: 100));
+    fakeElapsed += const Duration(milliseconds: 100);
+  }
+  await settle(tester);
+}
+
 /// Scrolls the first scrollable until [f] is built, for lazy lists.
 Future<void> _reveal(WidgetTester tester, Finder f) async {
   if (f.evaluate().isNotEmpty) return;
@@ -78,7 +94,18 @@ Future<void> pastePlan(WidgetTester tester, String json) async {
     await tapKey(tester, 'fab-import');
   }
   await tester.enterText(find.byKey(const ValueKey('import-text')), json);
+  await checkPlan(tester);
+}
+
+/// Taps "Check" and waits for its verdict: the errors or the import button.
+Future<void> checkPlan(WidgetTester tester) async {
   await tapKey(tester, 'import-check');
+  await waitFor(
+    tester,
+    find.byWidgetPredicate(
+      (w) => w.key == const ValueKey('import-errors') || w.key == const ValueKey('import-confirm'),
+    ),
+  );
 }
 
 Future<void> importPlan(WidgetTester tester, String json) async {
@@ -443,6 +470,7 @@ Future<void> clipboardFlow(WidgetTester tester) async {
   await Clipboard.setData(ClipboardData(text: await sampleText('habit-water.getonit.json')));
   await tapKey(tester, 'empty-import');
   await tapText(tester, 'Paste');
+  await waitFor(tester, find.text('8 glasses per day'));
   expect(find.text('8 glasses per day'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
   expect(find.text('Drink water'), findsOneWidget);
@@ -820,7 +848,7 @@ Future<void> askAiFlow(WidgetTester tester, Fakes fakes) async {
   await _snackGone(tester);
   await tapKey(tester, 'ask-import');
   await tester.enterText(find.byKey(const ValueKey('import-text')), answer);
-  await tapKey(tester, 'import-check');
+  await checkPlan(tester);
   expect(find.text('8 glasses per day'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
   expect(find.text('Drink water'), findsOneWidget);
@@ -848,7 +876,7 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   await _snackGone(tester);
   await tapKey(tester, 'ask-import');
   await tester.enterText(find.byKey(const ValueKey('import-text')), '```json\n${jsonEncode(doc)}\n```');
-  await tapKey(tester, 'import-check');
+  await checkPlan(tester);
   expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
   expect(find.textContaining('deadline 14 Jan'), findsOneWidget);
   await tapKey(tester, 'import-confirm');
@@ -889,7 +917,7 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
       'documents': [template, doc],
     }),
   );
-  await tapKey(tester, 'import-check');
+  await checkPlan(tester);
   expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
   expect(
     find.descendant(

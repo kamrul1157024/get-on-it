@@ -19,6 +19,13 @@ void main() {
     // Made inside the test so its streams run in the test's fake-time zone.
     final db = memoryDatabase();
     addTearDown(db.close);
+    // Tear-downs run last-first: the app goes away before its database
+    // closes. A failed test skips stop(), and closing the database under a
+    // live app hung every test after it.
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 500));
+    });
     final fakes = Fakes();
     await tester.pumpWidget(buildTestApp(db: db, clock: clock, fakes: fakes, listenForIntents: listenForIntents));
     await settle(tester);

@@ -34,6 +34,13 @@ void main() {
     rootBundle.clear();
     final db = memoryDatabase();
     addTearDown(db.close);
+    // Tear-downs run last-first: the app goes away before its database
+    // closes. A failed test skips stop(), and closing the database under a
+    // live app hung every test after it.
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 500));
+    });
     final fakes = Fakes();
     await tester.pumpWidget(
       buildTestApp(
@@ -173,7 +180,8 @@ void main() {
   });
 
   testWidgets('the real nudge service runs, nudges on unlock, and stops', (tester) async {
-    await start(tester, realNudges: true);
+    // The sample plans skip some weekdays; a fixed Wednesday keeps all four open.
+    await start(tester, realNudges: true, clock: TestClock(DateTime(2026, 10, 21, 9)));
     await tapKey(tester, 'empty-samples');
     await tester.tap(find.byTooltip('Settings'));
     await settle(tester);
