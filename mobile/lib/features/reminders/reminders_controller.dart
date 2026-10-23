@@ -125,8 +125,21 @@ class RemindersController extends Notifier<RemindersState> {
       nowMinute: now.hour * 60 + now.minute,
     );
     final wanted = {for (final r in plan) r.id};
-    for (final id in await _gw.pendingIds()) {
-      if (id & snoozeBit == 0 && !wanted.contains(id)) await _gw.cancel(id);
+    final live = {for (final g in goals) g.id};
+    bool doneToday(String goalId) => ref.read(goalViewProvider(goalId))?.state['todayComplete'] == true;
+    // A reminder of a goal that is gone (deleted, or replaced by a restore)
+    // or whose work is done today stops, snoozed or not. Other snoozed ones
+    // stay: the user asked for them.
+    bool over(String? goalId) => goalId != null && (!live.contains(goalId) || doneToday(goalId));
+    for (final n in await _gw.pending()) {
+      final snoozed = n.id & snoozeBit != 0;
+      if (over(n.goalId) || (!snoozed && !wanted.contains(n.id))) await _gw.cancel(n.id);
+    }
+    // One already on screen (a sticky reminder, a ringing alarm) goes too.
+    // Android drops its payload, so its id tells the goal.
+    for (final n in await _gw.shown()) {
+      final goalId = n.goalId ?? live.where((g) => reminderIdIsOf(n.id, g)).firstOrNull;
+      if (goalId == null || over(goalId)) await _gw.cancel(n.id);
     }
     for (final r in plan) {
       await _gw.schedule(r);

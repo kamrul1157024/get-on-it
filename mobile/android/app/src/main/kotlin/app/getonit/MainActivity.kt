@@ -53,6 +53,7 @@ class MainActivity : FlutterActivity() {
                 // settings and today's open work; the service does the rest.
                 "nudgeConfigure" -> {
                     NudgeStore.saveConfig(this, call.arguments as String)
+                    NudgeEngine.dropStale(this)
                     if (NudgeStore.config(this).enabled) NudgeService.start(this) else NudgeService.stop(this)
                     result.success(null)
                 }

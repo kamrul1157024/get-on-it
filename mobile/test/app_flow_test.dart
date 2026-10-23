@@ -115,6 +115,18 @@ void main() {
     await stop(tester);
   });
 
+  testWidgets('deleting a goal stops its reminders, snoozes, shown alarms and nudges', (tester) async {
+    final fakes = await start(tester, clock: TestClock(DateTime(2026, 10, 21, 9)));
+    await deleteStopsRemindersFlow(tester, fakes);
+    await stop(tester);
+  });
+
+  testWidgets('finishing today clears the reminders on screen and snoozed', (tester) async {
+    final fakes = await start(tester, clock: TestClock(DateTime(2026, 10, 21, 9)));
+    await doneClearsRemindersFlow(tester, fakes);
+    await stop(tester);
+  });
+
   testWidgets('alarms: strict challenge, re-ring, emergency exit, snooze', (tester) async {
     final clock = TestClock(DateTime(2026, 10, 21, 9));
     final fakes = await start(tester, clock: clock);

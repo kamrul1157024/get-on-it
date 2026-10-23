@@ -132,10 +132,21 @@ class FakeGateway implements NotificationGateway {
     scheduled[r.id] = (r, at ?? r.localTime);
   }
 
+  /// Reminders on screen now: id → payload.
+  final onScreen = <int, String>{};
+
+  /// Simulates a scheduled reminder going off: it leaves the schedule and
+  /// shows, as Android does.
+  void fire(int id) {
+    final r = scheduled.remove(id)!.$1;
+    onScreen[id] = r.payload;
+  }
+
   @override
   Future<void> cancel(int id) async {
     cancelled.add(id);
     scheduled.remove(id);
+    onScreen.remove(id);
   }
 
   @override
@@ -143,6 +154,16 @@ class FakeGateway implements NotificationGateway {
     plans++;
     return scheduled.keys.toSet();
   }
+
+  @override
+  Future<List<HeldReminder>> pending() async {
+    plans++;
+    return [for (final e in scheduled.entries) HeldReminder(e.key, e.value.$1.payload)];
+  }
+
+  // Like Android: a shown notification comes back without its payload.
+  @override
+  Future<List<HeldReminder>> shown() async => [for (final id in onScreen.keys) HeldReminder(id, null)];
 
   @override
   Future<ReminderPermissions> permissions() async => permissionsGranted;

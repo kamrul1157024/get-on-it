@@ -30,6 +30,7 @@ void main() {
     bool realPlayer = false,
     bool realNudges = false,
     TestClock? clock,
+    Map<String, String> settings = const {},
   }) async {
     rootBundle.clear();
     // Android lets an app read the clipboard only while it has focus, and on
@@ -40,6 +41,9 @@ void main() {
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
     final db = memoryDatabase();
     addTearDown(db.close);
+    for (final e in settings.entries) {
+      await Repository(db).setSetting(e.key, e.value);
+    }
     // Tear-downs run last-first: the app goes away before its database
     // closes. A failed test skips stop(), and closing the database under a
     // live app hung every test after it.
@@ -187,7 +191,14 @@ void main() {
 
   testWidgets('the real nudge service runs, nudges on unlock, and stops', (tester) async {
     // The sample plans skip some weekdays; a fixed Wednesday keeps all four open.
-    await start(tester, realNudges: true, clock: TestClock(DateTime(2026, 10, 21, 9)));
+    // The native service checks quiet hours on the real clock; CI runs at any
+    // hour, so the test has none.
+    await start(
+      tester,
+      realNudges: true,
+      clock: TestClock(DateTime(2026, 10, 21, 9)),
+      settings: const {'reminders.quietStart': '00:00', 'reminders.quietEnd': '00:00'},
+    );
     await tapKey(tester, 'empty-samples');
     await tester.tap(find.byTooltip('Settings'));
     await settle(tester);

@@ -15,6 +15,14 @@ class NudgeRulesTest {
     private fun decide(c: NudgeConfig = base, h: NudgeHistory = NudgeHistory(), trigger: Trigger = Trigger.Unlock(), nowMs: Long = t0, minute: Int = noon) =
         NudgeRules.decide(c, h, trigger, "2026-10-21", nowMs, minute)
 
+    @Test fun aNudgeGoesWhenItsGoalHasNoOpenWork() {
+        assertEquals(true, NudgeRules.shownMayStay(null, emptyList()))
+        assertEquals(true, NudgeRules.shownMayStay("atomic-habits", listOf(work)))
+        // Deleted, or done today: the goal is no longer in the pending list.
+        assertEquals(false, NudgeRules.shownMayStay("atomic-habits", emptyList()))
+        assertEquals(false, NudgeRules.shownMayStay("gone", listOf(work)))
+    }
+
     @Test fun unlockNudgesWithTheFirstOpenWork() {
         val (nudge, h) = decide()
         assertNotNull(nudge)

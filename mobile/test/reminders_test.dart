@@ -1,3 +1,4 @@
+import 'package:getonit/features/reminders/reminders_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:getonit/core/events/goal_event.dart';
 import 'package:getonit/core/schema/documents.dart';
@@ -283,5 +284,13 @@ void main() {
         true,
       );
     });
+  });
+
+  test('a shown reminder without payload is matched to its goal by id', () {
+    final id = reminderId('stretch', 300, 2);
+    expect(reminderIdIsOf(id, 'stretch'), true);
+    expect(reminderIdIsOf((id & ~snoozeBit) | snoozeBit, 'stretch'), true, reason: 'snoozed');
+    expect(reminderIdIsOf(id, 'read-atomic-habits'), false);
+    expect(reminderIdIsOf(0, 'stretch'), false);
   });
 }

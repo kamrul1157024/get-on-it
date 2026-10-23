@@ -188,6 +188,14 @@ object Wording {
  * multiple of its threshold.
  */
 object NudgeRules {
+    /**
+     * Whether the nudge on screen, about [shownGoal], may stay: its goal must
+     * still have open work today. A deleted goal, or one done today, drops out
+     * of [pending], and its nudge goes.
+     */
+    fun shownMayStay(shownGoal: String?, pending: List<PendingWork>): Boolean =
+        shownGoal == null || pending.any { it.goalId == shownGoal }
+
     fun isQuiet(c: NudgeConfig, minuteOfDay: Int): Boolean =
         if (c.quietStartMin > c.quietEndMin) minuteOfDay >= c.quietStartMin || minuteOfDay < c.quietEndMin
         else minuteOfDay >= c.quietStartMin && minuteOfDay < c.quietEndMin

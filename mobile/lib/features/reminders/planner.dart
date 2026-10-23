@@ -192,13 +192,21 @@ class ReminderInput {
   final String body;
 }
 
-int reminderId(String goalId, int day, int step) {
+int _goalHash(String goalId) {
   var h = 17;
   for (final c in goalId.codeUnits) {
     h = (h * 31 + c) & 0x7ffff;
   }
-  return (h * 4096 + (day % 512) * 8 + step) & 0x7fffffff;
+  return h;
 }
+
+int reminderId(String goalId, int day, int step) => (_goalHash(goalId) * 4096 + (day % 512) * 8 + step) & 0x7fffffff;
+
+/// Whether reminder [id] (snoozed or not) can belong to [goalId]. Android
+/// gives back a shown notification without its payload, so its id is all
+/// there is. The snooze bit shares the hash's top bit, so that bit is not
+/// compared.
+bool reminderIdIsOf(int id, String goalId) => (id >> 12) & 0x3ffff == _goalHash(goalId) & 0x3ffff;
 
 /// Turns approved ladders into concrete reminders for [days] days from
 /// [today], applying the safety rules. Pure: the same input, the same plan.
