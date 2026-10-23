@@ -4,7 +4,7 @@
 
 *Do the thing.*
 
-Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Claude, ChatGPT, or another) makes the plan. The app shows the plan, tracks your progress, and makes sure that you do the work.
+Get On It is a goal and habit tracker for Android, built with Flutter. Any AI chat (for example ChatGPT or Claude) makes the plan. The app shows the plan, tracks your progress, and makes sure that you do the work.
 
 <table align="center">
   <tr>
@@ -20,9 +20,11 @@ Get On It is a goal and habit tracker for Android, built with Flutter. An AI (Cl
   </tr>
 </table>
 
+Get On It is not affiliated with or endorsed by OpenAI or Anthropic. ChatGPT and Claude are named only as examples of AI chats.
+
 ## What it does
 
-- **Plans from AI.** Paste or share a plan from Claude or ChatGPT. The app checks it and shows the real goal screen and both widgets before it saves anything. If something is wrong, **Fix with AI** copies a prompt with the exact problems.
+- **Plans from AI.** Paste or share a plan from any AI chat, for example ChatGPT or Claude. The app checks it and shows the real goal screen and both widgets before it saves anything. If something is wrong, **Fix with AI** copies a prompt with the exact problems.
 - **Your own screens and widgets.** Ask the AI for a custom look, or use **Change the look with AI** on a goal. The plan and your progress stay.
 - **Courses, books, and habits.** Watch YouTube lectures from where you stopped. Read today's PDF pages. Count glasses of water, tick a checklist, or avoid a habit.
 - **Progress you can trust.** Streaks, pace against your deadline, and fixed daily targets. Progress is stored as events, so a new version of a plan keeps your progress.
@@ -130,4 +132,6 @@ CI runs all of these, including the e2e suite on an Android emulator. Releases: 
 - [Backup](docs/backup.md)
 - [Google Drive setup (optional)](docs/drive.md)
 - [Release process](docs/release.md)
+- [Publish on Google Play](docs/play-store/checklist.md) and the [store listing texts](docs/play-store/listing.md)
+- [Privacy policy](https://kamrul1157024.github.io/get-on-it/privacy)
 - [Sample UI cards](mockups/cards.html). Open the file in a browser. A small JavaScript reference renderer draws each card from its JSON.

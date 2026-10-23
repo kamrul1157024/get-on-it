@@ -15,13 +15,17 @@ The workflow stops in these cases:
 - A tag for the new version already exists.
 - A signing secret is missing.
 
-The release contains `getonit.apk` and `getonit.apk.sha256`. The asset name does not contain the version. So this link always gives the newest APK:
+The release contains:
+
+- `getonit.apk` and `getonit.apk.sha256`: the GitHub build. It updates itself from GitHub releases.
+- `getonit.aab` and `getonit.aab.sha256`: the Google Play build (`DISTRIBUTION=play`). It has no GitHub updater and no "install apps" permission. Upload it to Play Console ([docs/play-store/checklist.md](play-store/checklist.md)).
+
+The asset names do not contain the version. So this link always gives the newest APK:
 
 ```
 https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk
 ```
 
-The repository is private. Only people with access to the repository can download the APK.
 
 ## Signing key (one-time setup)
 
@@ -60,3 +64,4 @@ Move `getonit-release.jks` to a safe place. Do not commit it. `.gitignore` ignor
 |---|---|
 | `make apk` | A debug APK. It installs beside the release app as `app.getonit.dev`. |
 | `make apk-release VERSION=0.1.0` | A release APK. Without `KEYSTORE_PATH`, it uses the debug key. |
+| `make aab-release VERSION=0.1.0` | The Google Play app bundle, signed like the APK. |

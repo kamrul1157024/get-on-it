@@ -45,6 +45,15 @@ android {
         }
     }
 
+    // DISTRIBUTION=play builds the Google Play version: the same app without
+    // the GitHub self-updater's install permission (src/play). A flag rather
+    // than product flavors, so plain `flutter build` and `flutter test` keep
+    // working without --flavor.
+    if (System.getenv("DISTRIBUTION") == "play") {
+        sourceSets.getByName("debug").manifest.srcFile("src/play/AndroidManifest.xml")
+        sourceSets.getByName("release").manifest.srcFile("src/play/AndroidManifest.xml")
+    }
+
     buildTypes {
         // Debug builds get their own application ID so they install beside the
         // release app; the two are signed with different keys and could never

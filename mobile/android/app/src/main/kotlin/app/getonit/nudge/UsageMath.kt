@@ -6,11 +6,20 @@ data class UsageEvent(val pkg: String, val cls: String, val timeMs: Long, val ki
         /** An activity came to the front (or, before Android 10, the app did). */
         RESUMED,
 
+        /** An activity lost focus; it may still be visible. */
+        PAUSED,
+
         /** An activity is no longer visible (or, before Android 10, the app left the front). */
         STOPPED,
 
         /** The screen went off or the phone shut down: nothing is visible. */
         ALL_HIDDEN,
+
+        /**
+         * The phone started. If it lost power or was killed, no shutdown event
+         * came, and apps open before still look visible.
+         */
+        DEVICE_STARTUP,
     }
 }
 
@@ -38,7 +47,11 @@ object UsageMath {
         val visible = mutableMapOf<String, MutableSet<String>>()
         val since = mutableMapOf<String, Long>()
         val total = mutableMapOf<String, Long>()
-        val seen = mutableSetOf<String>()
+        val firstEventMs = mutableMapOf<String, Long>()
+        var lastEventMs = windowStartMs
+        val opened = mutableSetOf<String>()
+        // The last screen-off or restart: nothing was visible across it.
+        var lastHiddenMs = Long.MIN_VALUE
 
         fun add(pkg: String, start: Long, end: Long) {
             val s = maxOf(start, fromMs)
@@ -52,25 +65,42 @@ object UsageMath {
         }
 
         for (ev in events.sortedBy { it.timeMs }) {
-            val first = seen.add(ev.pkg)
+            val firstSeen = firstEventMs.getOrPut(ev.pkg) { ev.timeMs }
             when (ev.kind) {
                 UsageEvent.Kind.RESUMED -> {
                     val set = visible.getOrPut(ev.pkg) { mutableSetOf() }
                     if (set.isEmpty() && ev.pkg !in since) since[ev.pkg] = ev.timeMs
                     set += ev.cls
+                    opened += ev.pkg
                 }
                 UsageEvent.Kind.STOPPED -> {
                     val set = visible[ev.pkg]
-                    if (set == null && first) {
-                        // Visible since before the events start: count from there.
-                        add(ev.pkg, windowStartMs, ev.timeMs)
-                    } else if (set != null) {
+                    if (set == null) {
+                        // A stop with no start: Android does not always log
+                        // the resume. Count only from this app's first event
+                        // in the window, never from the window start (that
+                        // read 2 minutes of YouTube as "16 h 26 min"). Older
+                        // time may count low, never high.
+                        if (ev.pkg !in opened) add(ev.pkg, maxOf(firstSeen, lastHiddenMs), ev.timeMs)
+                    } else {
                         set -= ev.cls
                         if (set.isEmpty()) close(ev.pkg, ev.timeMs)
                     }
                 }
-                UsageEvent.Kind.ALL_HIDDEN -> for (pkg in since.keys.toList()) close(pkg, ev.timeMs)
+                UsageEvent.Kind.PAUSED -> {}
+                UsageEvent.Kind.ALL_HIDDEN -> {
+                    for (pkg in since.keys.toList()) close(pkg, ev.timeMs)
+                    lastHiddenMs = ev.timeMs
+                }
+                // When the phone went off is unknown: end open sessions at the
+                // last event before the restart. That can count a little low,
+                // never the hours the phone was off.
+                UsageEvent.Kind.DEVICE_STARTUP -> {
+                    for (pkg in since.keys.toList()) close(pkg, lastEventMs)
+                    lastHiddenMs = ev.timeMs
+                }
             }
+            lastEventMs = ev.timeMs
         }
         for (pkg in since.keys.toList()) close(pkg, toMs)
         return total

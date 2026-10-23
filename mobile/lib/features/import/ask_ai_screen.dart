@@ -177,7 +177,7 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     // Replace, not queue: several taps would otherwise stack messages.
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Prompt copied. Paste it into Claude or ChatGPT.')));
+      ..showSnackBar(const SnackBar(content: Text('Prompt copied. Paste it into your AI chat.')));
     if (open != null) await ref.read(externalLauncherProvider)(open);
   }
 
@@ -236,7 +236,7 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
                   ? 'The prompt holds your plan and its current design. The AI changes only the design; your plan and progress stay.'
                   : editing
                   ? 'The prompt holds your current plan and progress, and asks the AI to keep your progress.'
-                  : 'The prompt tells the AI exactly what Get On It can import. It works with Claude, ChatGPT and other chat apps.',
+                  : 'The prompt tells the AI exactly what Get On It can import. It works with any AI chat, for example ChatGPT or Claude.',
               style: t.bodySmall,
             ),
             const SizedBox(height: 8),

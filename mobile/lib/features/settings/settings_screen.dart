@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../core/time/clock_format.dart';
 import '../nudges/usage_access_help.dart';
 import '../nudges/wasted_time.dart';
+import '../../actions/action_router.dart';
+import '../update/distribution.dart';
 import '../update/update_dialog.dart';
 import '../../app/providers.dart';
 import '../../core/schema/capabilities.dart';
@@ -18,6 +20,9 @@ import '../reminders/planner.dart';
 import '../reminders/reminders_controller.dart';
 
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
+
+/// docs/privacy.md, served by GitHub Pages; the Play Store listing links it too.
+const privacyPolicyUrl = 'https://kamrul1157024.github.io/get-on-it/privacy';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -56,7 +61,11 @@ class SettingsScreen extends ConsumerWidget {
               key: const ValueKey('settings-check-update'),
               leading: const Icon(Icons.system_update),
               title: const Text('Check for updates'),
-              subtitle: const Text('Get the newest version from GitHub'),
+              subtitle: Text(
+                isPlayBuild(ref.watch(distributionProvider))
+                    ? 'Get the newest version from Google Play'
+                    : 'Get the newest version from GitHub',
+              ),
               onTap: () => checkForUpdateNow(context, ref),
             ),
           ),
@@ -64,6 +73,15 @@ class SettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text('Advanced', style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Consumer(
+            builder: (context, ref, _) => ListTile(
+              key: const ValueKey('settings-privacy'),
+              title: const Text('Privacy policy'),
+              subtitle: const Text('What the app stores, and what stays on your phone.'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => ref.read(externalLauncherProvider)(Uri.parse(privacyPolicyUrl)),
+            ),
           ),
           ListTile(
             title: const Text('Capability manifest'),

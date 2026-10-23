@@ -329,6 +329,9 @@ Future<void> timeLostFlow(WidgetTester tester, Fakes fakes) async {
   // No usage access: one row that leads to it.
   expect(find.byKey(const ValueKey('time-lost')), findsNothing);
   await tapKey(tester, 'time-lost-setup');
+  // Google Play's prominent disclosure comes before the steps.
+  expect(find.byKey(const ValueKey('usage-disclosure')), findsOneWidget);
+  await tapKey(tester, 'disclosure-agree');
   expect(find.byKey(const ValueKey('usage-help')), findsOneWidget);
   await tapKey(tester, 'usage-open-settings');
   await tapKey(tester, 'usage-close');
@@ -932,6 +935,9 @@ Future<void> nudgesFlow(WidgetTester tester, Fakes fakes, {required Future<void>
   );
   await settle(tester);
   // The steps for Android's restricted setting come first.
+  // Google Play's prominent disclosure comes before the steps.
+  expect(find.byKey(const ValueKey('usage-disclosure')), findsOneWidget);
+  await tapKey(tester, 'disclosure-agree');
   expect(find.byKey(const ValueKey('usage-help')), findsOneWidget);
   await tapKey(tester, 'usage-open-settings');
   await tapKey(tester, 'usage-close');

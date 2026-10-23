@@ -1,6 +1,8 @@
 package app.getonit.nudge
 
 import app.getonit.nudge.UsageEvent.Kind.ALL_HIDDEN
+import app.getonit.nudge.UsageEvent.Kind.DEVICE_STARTUP
+import app.getonit.nudge.UsageEvent.Kind.PAUSED
 import app.getonit.nudge.UsageEvent.Kind.RESUMED
 import app.getonit.nudge.UsageEvent.Kind.STOPPED
 import org.junit.Assert.assertEquals
@@ -32,12 +34,15 @@ class UsageMathTest {
         assertEquals(10 * min, ms[yt])
     }
 
-    @Test fun anAppVisibleBeforeTheEventsStartCountsFromTheWindowStartCutAtMidnight() {
-        // Only the STOPPED event is inside the window: the app was on screen
-        // since before it. It counts from midnight, not from the window start.
-        val events = listOf(ev(yt, 20, STOPPED))
-        val ms = UsageMath.visibleMs(events, fromMs = midnight, toMs = at(30), windowStartMs = at(-180))
-        assertEquals(20 * min, ms[yt])
+    @Test fun aStopWithNoStartNeverCountsFromTheWindowStart() {
+        // Android did not log YouTube's resume: only a pause at 4:24 PM and a
+        // stop at 4:26 PM. That is 2 minutes, not "since 9 PM yesterday".
+        val events = listOf(ev(yt, 16 * 60 + 24, PAUSED), ev(yt, 16 * 60 + 26, STOPPED))
+        val ms = UsageMath.visibleMs(events, fromMs = midnight, toMs = at(16 * 60 + 29), windowStartMs = at(-180))
+        assertEquals(2 * min, ms[yt])
+        // A stop as the app's only event counts nothing: its start is unknown.
+        val only = UsageMath.visibleMs(listOf(ev(yt, 20, STOPPED)), midnight, at(30), windowStartMs = at(-180))
+        assertEquals(null, only[yt])
     }
 
     @Test fun twoActivitiesOfOneAppCountOnce() {
@@ -114,5 +119,22 @@ class UsageMathTest {
         val total = UsageMath.sum(mapOf(insta to 2 * hour), mapOf(insta to 10 * min, yt to 5 * min))
         assertEquals(2 * hour + 10 * min, total[insta])
         assertEquals(5 * min, total[yt])
+    }
+
+    @Test fun aPhoneThatLostPowerDoesNotCountTheHoursItWasOff() {
+        // YouTube open at 9 PM, then the battery died: no stop and no shutdown
+        // event. The phone started again at 2 PM; YouTube ran 2:04-2:06 PM.
+        // Seen on an emulator as "16 h 26 min" lost today.
+        val startup = UsageEvent("android", "", at(14 * 60), DEVICE_STARTUP)
+        val events = listOf(
+            ev(yt, -180, RESUMED),
+            startup,
+            ev(insta, 14 * 60 + 1, STOPPED),
+            ev(yt, 14 * 60 + 4, RESUMED), ev(yt, 14 * 60 + 6, STOPPED),
+        )
+        val ms = UsageMath.visibleMs(events, fromMs = midnight, toMs = at(16 * 60 + 26), windowStartMs = at(-180))
+        assertEquals(2 * min, ms[yt])
+        // A stop right after the restart is not "visible since the window began".
+        assertEquals(null, ms[insta])
     }
 }
