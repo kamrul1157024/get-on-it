@@ -150,7 +150,7 @@ class _ProblemCard extends StatelessWidget {
       VideoProblem.notEmbeddable =>
         'The owner does not allow this video in other apps. Watch it on YouTube, then come back and tap Mark done.',
       VideoProblem.notFound =>
-        'This video is not available. It may be private or removed. Ask Claude to check the video ID.',
+        'This video is not available. It may be private or removed. Ask your AI chat to check the video ID.',
       VideoProblem.failed => 'The video did not load. Check your connection, or watch it on YouTube.',
     };
     final scheme = Theme.of(context).colorScheme;

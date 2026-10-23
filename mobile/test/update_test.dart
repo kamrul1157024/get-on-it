@@ -151,6 +151,44 @@ void main() {
     });
   });
 
+  testWidgets('the Google Play build updates through Play and never asks GitHub', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    fakeClipboard(tester.binding.defaultBinaryMessenger);
+    rootBundle.clear();
+    final db = memoryDatabase();
+    addTearDown(db.close);
+    final fakes = Fakes();
+    fakes.updates
+      ..version = '0.4.2'
+      ..distribution = 'play'
+      ..playHasUpdate = true
+      ..releases = [release('v0.5.0', body: 'GitHub notes')];
+
+    await tester.pumpWidget(buildTestApp(db: db, fakes: fakes));
+    await settle(tester);
+    // Start: Play's flexible update, no GitHub dialog, no APK files.
+    expect(fakes.updates.playUpdatesStarted, 1);
+    expect(fakes.updates.requests, 0);
+    expect(fakes.updates.cleanUps, isEmpty);
+    expect(find.byKey(const ValueKey('update-dialog')), findsNothing);
+
+    // Settings says where updates come from and asks Play again.
+    await tester.tap(find.byTooltip('Settings'));
+    await settle(tester);
+    fakes.updates.playHasUpdate = false;
+    await tapKey(tester, 'settings-check-update');
+    expect(find.text('Get the newest version from Google Play'), findsOneWidget);
+    expect(find.text('You have the latest version from Google Play.'), findsOneWidget);
+    expect(fakes.updates.playChecks, 2);
+    expect(fakes.updates.requests, 0);
+    expect(fakes.updates.installed, isEmpty);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('on start: release notes once, install hands the APK over; settings can check again', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;

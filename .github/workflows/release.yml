@@ -123,10 +123,27 @@ jobs:
           GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
         run: make apk-release
 
+      # The Google Play build: the same version, signed with the same key (the
+      # Play upload key), without the GitHub updater.
+      - name: Build release app bundle for Google Play
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEYSTORE_PATH: getonit-release.jks
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+        run: make aab-release
+
       - uses: actions/upload-artifact@v4
         with:
           name: apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aab
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
   publish:
@@ -150,7 +167,8 @@ jobs:
         run: |
           mkdir -p dist
           mv artifacts/apk/app-release.apk dist/getonit.apk
-          (cd dist && sha256sum getonit.apk > getonit.apk.sha256)
+          mv artifacts/aab/app-release.aab dist/getonit.aab
+          (cd dist && sha256sum getonit.apk > getonit.apk.sha256 && sha256sum getonit.aab > getonit.aab.sha256)
 
       - name: Create GitHub release
         env:

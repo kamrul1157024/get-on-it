@@ -59,6 +59,7 @@ dependencies:
   open_file: ^4.0.0
   flutter_markdown_plus: ^1.0.12
   crypto: ^3.0.7
+  in_app_update: ^5.0.0
 
 dev_dependencies:
   flutter_test:

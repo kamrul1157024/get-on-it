@@ -170,7 +170,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Paste the plan that Claude or ChatGPT made for you.', style: t.bodyMedium),
+            Text('Paste the plan that your AI chat made for you.', style: t.bodyMedium),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(

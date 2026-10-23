@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:getonit/features/permissions/permission_prompt.dart';
+import 'package:getonit/features/update/distribution.dart';
 import 'package:getonit/features/update/update_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -293,8 +294,23 @@ class MemoryShownPermissions implements ShownPermissions {
 
 /// GitHub's releases list and the installer, for the update flow. "dev" is
 /// what a debug build reports: no check on start.
-class FakeUpdates implements ApkInstaller {
+class FakeUpdates implements ApkInstaller, PlayUpdates {
   String version = 'dev';
+
+  /// "github" (the default) or "play".
+  String distribution = 'github';
+  bool playHasUpdate = false;
+  int playChecks = 0;
+  int playUpdatesStarted = 0;
+
+  @override
+  Future<bool> available() async {
+    playChecks++;
+    return playHasUpdate;
+  }
+
+  @override
+  Future<void> startFlexible() async => playUpdatesStarted++;
   List<Map<String, Object?>> releases = const [];
   int requests = 0;
   final installed = <String>[];
@@ -346,6 +362,8 @@ Widget buildTestApp({
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
       installedVersionProvider.overrideWith((ref) => fakes.updates.version),
+      distributionProvider.overrideWith((ref) => fakes.updates.distribution),
+      playUpdatesProvider.overrideWithValue(fakes.updates),
       permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
       driveConfiguredProvider.overrideWith((ref) => fakes.driveConfigured),
       shownPermissionsProvider.overrideWithValue(fakes.shownPermissions),

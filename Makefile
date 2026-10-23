@@ -1,4 +1,4 @@
-.PHONY: help get gen analyze test e2e apk apk-release release-publish
+.PHONY: help get gen analyze test e2e apk apk-release aab-release release-publish
 
 MOBILE = mobile
 APK_RELEASE = $(MOBILE)/build/app/outputs/flutter-apk/app-release.apk
@@ -42,6 +42,17 @@ apk-release:
 		--build-name=$(VERSION) \
 		--build-number=$(shell git rev-list --count HEAD) \
 		--dart-define=APP_VERSION=$(VERSION) \
+		--dart-define=GOOGLE_SERVER_CLIENT_ID=$(GOOGLE_SERVER_CLIENT_ID)
+
+## aab-release    Google Play app bundle: VERSION=x.y.z, signed like apk-release, without the GitHub updater
+aab-release:
+	@printf '%s' "$(VERSION)" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$$' || \
+		(echo "Error: aab-release needs VERSION=x.y.z" >&2 && exit 1)
+	cd $(MOBILE) && DISTRIBUTION=play flutter build appbundle --release \
+		--build-name=$(VERSION) \
+		--build-number=$(shell git rev-list --count HEAD) \
+		--dart-define=APP_VERSION=$(VERSION) \
+		--dart-define=DISTRIBUTION=play \
 		--dart-define=GOOGLE_SERVER_CLIENT_ID=$(GOOGLE_SERVER_CLIENT_ID)
 
 ## release-publish  Create the GitHub release v$(VERSION) from what is staged in dist/

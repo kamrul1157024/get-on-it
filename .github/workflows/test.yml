@@ -73,6 +73,10 @@ jobs:
       - run: python3 skill/skills/getonit-planner/scripts/sync_schemas.py --check
       - run: python3 -m unittest discover -s skill/tests -v
 
+      # GitHub Pages serves docs/privacy.html as the Play Store privacy policy.
+      - name: Privacy page matches docs/privacy.md
+        run: python3 scripts/privacy_html.py --check
+
   e2e:
     name: E2E (Android emulator)
     runs-on: ubuntu-latest

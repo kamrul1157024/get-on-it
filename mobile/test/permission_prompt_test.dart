@@ -57,6 +57,9 @@ void main() {
     await tapKey(tester, 'permission-allow:usageAccess');
     // Steps first: Android 13+ blocks usage access for downloaded APKs until
     // restricted settings are allowed in App info.
+    // Google Play's prominent disclosure comes before the steps.
+    expect(find.byKey(const ValueKey('usage-disclosure')), findsOneWidget);
+    await tapKey(tester, 'disclosure-agree');
     expect(find.byKey(const ValueKey('usage-help')), findsOneWidget);
     await tapKey(tester, 'usage-open-app-info');
     expect(fakes.nudges.appDetailsOpened, 1);
@@ -152,6 +155,8 @@ void main() {
     expect(prompt, findsOneWidget);
     expect(row('overlay'), findsOneWidget);
     await tapKey(tester, 'permission-allow:overlay');
+    expect(find.byKey(const ValueKey('overlay-disclosure')), findsOneWidget);
+    await tapKey(tester, 'disclosure-agree');
     expect(find.byKey(const ValueKey('overlay-help')), findsOneWidget);
     await tapKey(tester, 'overlay-open-settings');
     await tapKey(tester, 'overlay-close');
@@ -196,5 +201,19 @@ void main() {
     await tester.tap(find.text('Hard'));
     await waitFor(tester, find.byKey(const ValueKey('nudges-overlay')));
     expect(find.text('At most one nudge every 20 min, and 12 a day.'), findsOneWidget);
+  });
+
+  testWidgets('usage access asks for consent first; "Not now" asks for nothing', (tester) async {
+    await setUpApp(tester);
+    await strengthDone();
+    await open(tester);
+    await tapKey(tester, 'permission-allow:usageAccess');
+    expect(find.byKey(const ValueKey('usage-disclosure')), findsOneWidget);
+    expect(find.textContaining('never sends it anywhere'), findsOneWidget);
+    await tapKey(tester, 'disclosure-not-now');
+    expect(find.byKey(const ValueKey('usage-help')), findsNothing);
+    expect(fakes.nudges.usageAccess, false);
+    expect(fakes.nudges.appDetailsOpened, 0);
+    await tapKey(tester, 'permission-done');
   });
 }

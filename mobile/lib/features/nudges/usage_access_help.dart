@@ -7,7 +7,7 @@ import 'nudges.dart';
 /// Restricted Setting") until the user allows restricted settings on the App
 /// info page. The app cannot do that step itself, and cannot tell whether
 /// the phone blocks it, so the steps show every time.
-Future<void> showUsageAccessHelp(BuildContext context, NudgeBridge bridge) => showDialog<void>(
+Future<void> _showUsageAccessSteps(BuildContext context, NudgeBridge bridge) => showDialog<void>(
   context: context,
   builder: (ctx) {
     final t = Theme.of(ctx).textTheme;
@@ -65,7 +65,7 @@ Future<void> showUsageAccessHelp(BuildContext context, NudgeBridge bridge) => sh
 /// Guides the user to "Display over other apps" for the Push me hard stop
 /// screen. Android 13+ can restrict it for an app from a downloaded APK, the
 /// same way as usage access.
-Future<void> showOverlayHelp(BuildContext context, NudgeBridge bridge) => showDialog<void>(
+Future<void> _showOverlaySteps(BuildContext context, NudgeBridge bridge) => showDialog<void>(
   context: context,
   builder: (ctx) => AlertDialog(
     key: const ValueKey('overlay-help'),
@@ -86,3 +86,84 @@ Future<void> showOverlayHelp(BuildContext context, NudgeBridge bridge) => showDi
     ],
   ),
 );
+
+/// Usage access, with Google Play's prominent disclosure first: what the app
+/// reads, why, and that it stays on the phone. The steps follow only after
+/// the user agrees.
+Future<void> showUsageAccessHelp(BuildContext context, NudgeBridge bridge) async {
+  final agreed = await showDisclosure(
+    context,
+    key: const ValueKey('usage-disclosure'),
+    title: 'Get On It reads your app usage',
+    points: const [
+      'What: which apps are open on your phone, and for how long.',
+      'Why: to nudge you when you spend too long in an app, and to show the "Time lost" card.',
+      'It stays on your phone. Get On It never sends it anywhere.',
+      'You can turn it off at any time in Android settings.',
+    ],
+  );
+  if (agreed && context.mounted) await _showUsageAccessSteps(context, bridge);
+}
+
+/// "Display over other apps", with a short disclosure first.
+Future<void> showOverlayHelp(BuildContext context, NudgeBridge bridge) async {
+  final agreed = await showDisclosure(
+    context,
+    key: const ValueKey('overlay-disclosure'),
+    title: 'Get On It shows a stop screen',
+    points: const [
+      'What: a full-screen stop screen on top of an app you chose to limit.',
+      'When: only with the "Push me hard" level, after you pass the app\'s time limit.',
+      'Get On It does not read what is on your screen.',
+      'You can turn it off at any time in Android settings.',
+    ],
+  );
+  if (agreed && context.mounted) await _showOverlaySteps(context, bridge);
+}
+
+/// A prominent disclosure: true only when the user taps "Agree and continue".
+Future<bool> showDisclosure(
+  BuildContext context, {
+  required Key key,
+  required String title,
+  required List<String> points,
+}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: key,
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final p in points)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('•  '),
+                      Expanded(child: Text(p)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('disclosure-not-now'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            key: const ValueKey('disclosure-agree'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Agree and continue'),
+          ),
+        ],
+      ),
+    ) ??
+    false;

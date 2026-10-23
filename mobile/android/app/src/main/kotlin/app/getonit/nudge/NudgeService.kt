@@ -146,8 +146,10 @@ object NudgeEngine {
             val kind = if (Build.VERSION.SDK_INT >= 29) {
                 when (e.eventType) {
                     UsageEvents.Event.ACTIVITY_RESUMED -> UsageEvent.Kind.RESUMED
+                    UsageEvents.Event.ACTIVITY_PAUSED -> UsageEvent.Kind.PAUSED
                     UsageEvents.Event.ACTIVITY_STOPPED -> UsageEvent.Kind.STOPPED
                     UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.DEVICE_SHUTDOWN -> UsageEvent.Kind.ALL_HIDDEN
+                    UsageEvents.Event.DEVICE_STARTUP -> UsageEvent.Kind.DEVICE_STARTUP
                     else -> null
                 }
             } else {

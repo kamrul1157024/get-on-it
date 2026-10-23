@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../actions/action_router.dart';
+import 'distribution.dart';
 import 'update_service.dart';
 
 /// Says once what a new release changed. Closing the dialog by any route
@@ -11,6 +12,11 @@ import 'update_service.dart';
 Future<void> checkForUpdateOnStart(BuildContext context, WidgetRef ref) async {
   final service = ref.read(updateServiceProvider);
   if (!service.isReleaseBuild) return;
+  if (isPlayBuild(ref.read(distributionProvider))) {
+    final play = ref.read(playUpdatesProvider);
+    if (await play.available()) await play.startFlexible();
+    return;
+  }
   final downloads = ref.read(updateDownloadsProvider);
   // The update that just installed leaves its APK behind; it goes now.
   await _cleanUp(downloads, service.currentVersion);
@@ -24,6 +30,17 @@ Future<void> checkForUpdateOnStart(BuildContext context, WidgetRef ref) async {
 /// The "Check for updates" row in Settings: always answers.
 Future<void> checkForUpdateNow(BuildContext context, WidgetRef ref) async {
   final service = ref.read(updateServiceProvider);
+  if (isPlayBuild(ref.read(distributionProvider))) {
+    final play = ref.read(playUpdatesProvider);
+    if (await play.available()) {
+      await play.startFlexible();
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('You have the latest version from Google Play.')));
+    }
+    return;
+  }
   final downloads = ref.read(updateDownloadsProvider);
   if (service.isReleaseBuild) await _cleanUp(downloads, service.currentVersion);
   final info = await service.check();

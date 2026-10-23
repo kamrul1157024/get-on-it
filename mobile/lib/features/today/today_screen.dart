@@ -117,7 +117,7 @@ class _Empty extends StatelessWidget {
             Text('No goals yet', style: t.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Ask Claude or ChatGPT for a plan, then paste or share it here.',
+              'Ask any AI chat for a plan, then paste or share it here.',
               textAlign: TextAlign.center,
               style: t.bodyMedium,
             ),
