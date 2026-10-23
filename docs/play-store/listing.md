@@ -60,7 +60,9 @@ Get On It is not affiliated with or endorsed by OpenAI or Anthropic.
 |---|---|
 | App icon, 512 × 512 | `icon-512.png` |
 | Feature graphic, 1024 × 500 | `feature-graphic.png` |
-| Phone screenshots, 1080 × 1920 | `screenshots/*.png` |
+| Phone screenshots, 1080 × 1920, 24-bit PNG | `screenshots/01-today.png` … `07-nudge-strength.png`, in this order |
+
+The screenshots come from the Play build on an Android 16 emulator. They show no video thumbnails, so no third-party images appear on the store.
 
 ## Permission declarations
 
