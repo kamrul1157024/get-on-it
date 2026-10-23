@@ -667,6 +667,61 @@ const _strictHabit = {
   'data': {'mode': 'check'},
 };
 
+/// Turns on the strict habit's reminders, lets one ring, snoozes another, and
+/// returns the one on screen. Expects the clock at 09:00.
+Future<PlannedReminder> _ringingHabit(WidgetTester tester, FakeGateway n) async {
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  await tapKey(tester, 'import-reminders:stretch');
+  await tapKey(tester, 'import-confirm');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  final today = n.reminders.toList()..sort((a, b) => a.localTime.compareTo(b.localTime));
+  n.fire(today[0].id);
+  n.tap(today[1], action: 'snooze');
+  await settle(tester);
+  expect(n.onScreen, hasLength(1));
+  expect(n.scheduled.keys.where((id) => id & snoozeBit != 0), hasLength(1));
+  return today[0];
+}
+
+/// Deleting a goal stops everything it rang or will ring: the schedule, the
+/// snoozed reminder, the reminder on screen, and its nudges. Its reminder
+/// switch does not come back with a re-import.
+Future<void> deleteStopsRemindersFlow(WidgetTester tester, Fakes fakes) async {
+  final n = fakes.notifications;
+  await _ringingHabit(tester, n);
+  expect((fakes.nudges.last['pending'] as List).map((p) => (p as Map)['goalId']), contains('stretch'));
+
+  await tapText(tester, 'Stretch');
+  await tapKey(tester, 'goal-menu');
+  await tapText(tester, 'Delete goal');
+  await tapText(tester, 'Delete');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  expect(n.scheduled, isEmpty, reason: 'no scheduled or snoozed reminder is left');
+  expect(n.onScreen, isEmpty, reason: 'the reminder on screen goes too');
+  expect((fakes.nudges.last['pending'] as List).map((p) => (p as Map)['goalId']), isNot(contains('stretch')));
+
+  await pastePlan(tester, jsonEncode(_strictHabit));
+  final sw = tester.widget<SwitchListTile>(find.byKey(const ValueKey('import-reminders:stretch')));
+  expect(sw.value, false, reason: 'a deleted goal forgets its reminder switch');
+  await goBack(tester);
+}
+
+/// Finishing today's work takes the goal's ringing and snoozed reminders
+/// away; tomorrow's stay.
+Future<void> doneClearsRemindersFlow(WidgetTester tester, Fakes fakes) async {
+  final n = fakes.notifications;
+  final ringing = await _ringingHabit(tester, n);
+  n.tap(ringing, action: 'done');
+  await tester.pump(const Duration(seconds: 1));
+  await settle(tester);
+  expect(n.onScreen, isEmpty);
+  expect(n.scheduled.keys.where((id) => id & snoozeBit != 0), isEmpty);
+  expect(n.reminders.where((r) => r.day == ringing.day), isEmpty);
+  expect(n.reminders.where((r) => r.day > ringing.day), isNotEmpty);
+}
+
 /// Reminders: approval in the import preview, the plan in the notification
 /// system, today done, pause and resume, permissions, the goal menu switch,
 /// and the Done and Snooze buttons. Expects the clock at 09:00.

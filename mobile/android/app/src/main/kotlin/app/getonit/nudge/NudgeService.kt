@@ -34,6 +34,13 @@ object NudgeStore {
     fun saveConfig(ctx: Context, json: String) =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("config", json).apply()
 
+    /** The goal of the nudge on screen, if any. */
+    fun shownGoal(ctx: Context): String? =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("shownGoal", null)
+
+    fun saveShownGoal(ctx: Context, goalId: String?) =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("shownGoal", goalId).apply()
+
     fun config(ctx: Context): NudgeConfig {
         val raw = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("config", null) ?: return NudgeConfig()
         return try {
@@ -303,6 +310,15 @@ object NudgeEngine {
             .addAction(Notification.Action.Builder(null, "Break 1 h", breakIntent).build())
             .build()
         ctx.getSystemService(NotificationManager::class.java).notify(NUDGE_ID, notification)
+        NudgeStore.saveShownGoal(ctx, n.work.goalId)
+    }
+
+    /** Takes the nudge off the screen when its goal has no open work any more. */
+    fun dropStale(ctx: Context) {
+        val goal = NudgeStore.shownGoal(ctx) ?: return
+        if (NudgeRules.shownMayStay(goal, NudgeStore.config(ctx).pending)) return
+        clearSticky(ctx)
+        NudgeStore.saveShownGoal(ctx, null)
     }
 
     /** The app in front now, from usage events; null when unknown. */

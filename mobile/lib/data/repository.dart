@@ -168,10 +168,17 @@ class Repository {
     }
   }
 
+  /// Settings that belong to one goal: `<prefix><goalId>`.
+  static const goalSettingPrefixes = ['reminders.on.'];
+
   Future<void> deleteGoal(String id) => db.transaction(() async {
     await (db.delete(db.goals)..where((g) => g.id.equals(id))).go();
     await (db.delete(db.events)..where((e) => e.goalId.equals(id))).go();
     await (db.delete(db.linkedFiles)..where((f) => f.goalId.equals(id))).go();
+    // Re-importing a goal with this id must not turn its reminders back on.
+    for (final prefix in goalSettingPrefixes) {
+      await (db.delete(db.settings)..where((s) => s.key.equals('$prefix$id'))).go();
+    }
   });
 
   // Events ------------------------------------------------------------------

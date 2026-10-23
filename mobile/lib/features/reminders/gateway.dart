@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -21,6 +23,25 @@ class ReminderPermissions {
   final bool fullScreen;
 }
 
+/// A reminder the phone holds: scheduled, or already on screen.
+class HeldReminder {
+  const HeldReminder(this.id, this.payload);
+
+  final int id;
+  final String? payload;
+
+  /// The goal it belongs to; null for notifications that are not reminders.
+  String? get goalId {
+    final p = payload;
+    if (p == null) return null;
+    try {
+      return (jsonDecode(p) as Map)['goalId'] as String?;
+    } on FormatException {
+      return null;
+    }
+  }
+}
+
 /// The phone's notification system. Tests use a fake.
 abstract class NotificationGateway {
   Future<void> init(ReminderTap onTap);
@@ -37,6 +58,13 @@ abstract class NotificationGateway {
   Future<void> cancel(int id);
 
   Future<Set<int>> pendingIds();
+
+  /// Scheduled reminders, snoozed ones included.
+  Future<List<HeldReminder>> pending();
+
+  /// Reminders already on screen: a sticky reminder, a ringing alarm. Android
+  /// may give them back without their payload.
+  Future<List<HeldReminder>> shown();
 
   Future<ReminderPermissions> permissions();
 
@@ -163,7 +191,23 @@ class LocalNotificationsGateway implements NotificationGateway {
   Future<void> cancel(int id) => _plugin.cancel(id: id);
 
   @override
-  Future<Set<int>> pendingIds() async => {for (final p in await _plugin.pendingNotificationRequests()) p.id};
+  Future<Set<int>> pendingIds() async => {for (final p in await pending()) p.id};
+
+  @override
+  Future<List<HeldReminder>> pending() async => [
+    for (final p in await _plugin.pendingNotificationRequests()) HeldReminder(p.id, p.payload),
+  ];
+
+  // Nudges and the nudge service post on their own channels; only reminders
+  // count here.
+  static const _reminderChannels = {'reminders', 'reminders-sticky', 'alarms', 'alarms-strict'};
+
+  @override
+  Future<List<HeldReminder>> shown() async => [
+    for (final n in await _android?.getActiveNotifications() ?? const <ActiveNotification>[])
+      // Id 0 is Android's own group summary for the app's notifications.
+      if (n.id != null && n.id != 0 && _reminderChannels.contains(n.channelId)) HeldReminder(n.id!, n.payload),
+  ];
 
   @override
   Future<ReminderPermissions> permissions() async {

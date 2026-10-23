@@ -1,3 +1,4 @@
+import 'package:getonit/features/reminders/reminders_controller.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:getonit/core/events/goal_event.dart';
@@ -64,5 +65,10 @@ void main() {
     expect(await repo.watchGoals().first, isEmpty);
     expect(await repo.watchEvents(g.id).first, isEmpty);
     expect(await repo.watchLinkedFiles(g.id).first, isEmpty);
+  });
+
+  test('deleting a goal clears the settings that belong to it', () {
+    // The reminder switch lives in settings; deleteGoal must know its key.
+    expect(Repository.goalSettingPrefixes.any((p) => reminderSettingKey('g') == '${p}g'), true);
   });
 }
