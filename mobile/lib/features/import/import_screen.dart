@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,7 @@ import '../../render/surface_preview.dart';
 import '../../render/template_lint.dart';
 import '../reminders/reminder_labels.dart';
 import 'ask_ai_screen.dart';
+import 'plan_finder.dart';
 import '../reminders/reminders_controller.dart';
 
 /// Paste or receive a plan, check it, preview it, and save it. Spec §14.
@@ -51,6 +54,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   /// Surfaces that failed to lay out in the preview, as "goalId/surface".
   final _broken = <String>{};
 
+  /// Checks a moment after typing or pasting stops, so "Check plan" is only
+  /// a retry.
+  Timer? _autoCheck;
+  String? _checkedText;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +67,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   @override
   void dispose() {
+    _autoCheck?.cancel();
     _text.dispose();
     super.dispose();
   }
@@ -71,6 +80,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _check() async {
+    _checkedText = _text.text;
     // A plan shared while the app starts can arrive before the built-in
     // templates are installed.
     await ref.read(bootstrapProvider.future);
@@ -146,6 +156,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       }
     }
     ref.read(remindersProvider.notifier).scheduleSync();
+    // The same answer, still in the clipboard, is not offered again.
+    await markPlanSeen(ref, _text.text.trim());
     if (!mounted) return;
     final n = parsed.goals.length;
     final message = n > 0
@@ -188,7 +200,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               maxLines: 12,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
               decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '{ "kind": "goal", ... }'),
-              onChanged: (_) => setState(() => _parsed = null),
+              onChanged: (_) {
+                setState(() => _parsed = null);
+                _autoCheck?.cancel();
+                _autoCheck = Timer(const Duration(milliseconds: 700), () {
+                  // Already checked, for example by the button: keep the result.
+                  if (mounted && _text.text.trim().isNotEmpty && _text.text != _checkedText) _check();
+                });
+              },
             ),
             const SizedBox(height: 12),
             Row(
@@ -516,7 +535,8 @@ class _FixWithAi extends ConsumerWidget {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text('Fix prompt copied. Paste it into the same AI chat.')));
-      if (open != null) await ref.read(externalLauncherProvider)(open);
+      await armPlanFinder(ref, prompt);
+      if (open != null) await ref.read(aiChatLauncherProvider)(open);
     }
 
     return Card.outlined(
@@ -529,7 +549,9 @@ class _FixWithAi extends ConsumerWidget {
             Text(blocking ? 'Fix with AI' : 'Fix the warnings with AI (optional)', style: t.titleSmall),
             const SizedBox(height: 4),
             Text(
-              'Copy a prompt with the problems above, paste it into the AI chat, and import its new answer.',
+              '1. Tap a button below. It copies a prompt with the problems.\n'
+              '2. Paste it in the same AI chat with a long press, then send it.\n'
+              '3. Copy the new answer and come back here. Get On It finds the plan.',
               style: t.bodySmall,
             ),
             const SizedBox(height: 8),

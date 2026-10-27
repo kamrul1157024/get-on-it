@@ -36,6 +36,16 @@ final externalLauncherProvider = Provider<Future<void> Function(Uri url)>(
       (url) => launchUrl(url, mode: LaunchMode.externalApplication),
 );
 
+/// Opens an AI chat: its installed app when the phone has one (ChatGPT and
+/// Claude open their own links), else the website.
+final aiChatLauncherProvider = Provider<Future<void> Function(Uri url)>(
+  (ref) => (url) async {
+    if (!await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  },
+);
+
 /// Maps action types to handlers. Spec §8.
 class ActionRouter {
   ActionRouter(this.context, this.ref);

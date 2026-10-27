@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:getonit/features/import/howto_video.dart';
+import 'package:getonit/features/import/plan_finder.dart';
 import 'package:getonit/features/permissions/permission_prompt.dart';
 import 'package:getonit/features/update/distribution.dart';
 import 'package:getonit/features/update/update_service.dart';
@@ -271,6 +273,11 @@ class Fakes {
   /// The first-start permission popup. Off unless a test is about it.
   bool permissionPrompt = false;
 
+  /// The "Plan found" offer and the first how-to video. Off unless a test is
+  /// about them: the shared fake clipboard would offer plans in other flows.
+  bool planFinder = false;
+  bool howToAutoShow = false;
+
   /// Builds with a Google Cloud client id show the Drive section; the drive
   /// flow uses it with a fake account.
   bool driveConfigured = true;
@@ -357,7 +364,11 @@ Widget buildTestApp({
     databaseProvider.overrideWithValue(db),
     if (clock != null) wallClockProvider.overrideWithValue(clock.call),
     if (pdfPicker != null) pdfPickerProvider.overrideWithValue(pdfPicker),
-    if (fakes == null) permissionPromptEnabledProvider.overrideWith((ref) => false),
+    if (fakes == null) ...[
+      permissionPromptEnabledProvider.overrideWith((ref) => false),
+      planFinderEnabledProvider.overrideWith((ref) => false),
+      howToAutoShowProvider.overrideWith((ref) => false),
+    ],
     if (fakes != null) ...[
       externalLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveAccountProvider.overrideWithValue(fakes.driveAccount),
@@ -365,6 +376,9 @@ Widget buildTestApp({
       distributionProvider.overrideWith((ref) => fakes.updates.distribution),
       playUpdatesProvider.overrideWithValue(fakes.updates),
       permissionPromptEnabledProvider.overrideWith((ref) => fakes.permissionPrompt),
+      planFinderEnabledProvider.overrideWith((ref) => fakes.planFinder),
+      howToAutoShowProvider.overrideWith((ref) => fakes.howToAutoShow),
+      aiChatLauncherProvider.overrideWithValue((url) async => fakes.launched.add(url)),
       driveConfiguredProvider.overrideWith((ref) => fakes.driveConfigured),
       shownPermissionsProvider.overrideWithValue(fakes.shownPermissions),
       openBackupSettingsProvider.overrideWithValue(() async => fakes.backupSettingsOpened++),

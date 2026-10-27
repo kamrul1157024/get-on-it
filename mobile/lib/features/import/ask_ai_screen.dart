@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 
 import '../../actions/action_router.dart';
 import '../../app/providers.dart';
+import 'howto_video.dart';
 import 'import_screen.dart';
+import 'plan_finder.dart';
 
 /// Fills the copy-paste prompt (assets/prompt/plan_prompt.md). Pure, so a
 /// test can check that its examples still pass the app's validator.
@@ -146,6 +148,14 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showHowToOnce(context, ref);
+    });
+  }
+
+  @override
   void dispose() {
     _request.dispose();
     super.dispose();
@@ -173,12 +183,23 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
             today: today,
           );
     await Clipboard.setData(ClipboardData(text: prompt));
+    // When the user comes back with the answer, the app looks for it.
+    await armPlanFinder(ref, prompt);
     if (!mounted) return;
     // Replace, not queue: several taps would otherwise stack messages.
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Prompt copied. Paste it into your AI chat.')));
-    if (open != null) await ref.read(externalLauncherProvider)(open);
+      ..showSnackBar(const SnackBar(content: Text('Prompt copied. Paste it with a long press, then send it.')));
+    if (open != null) await ref.read(aiChatLauncherProvider)(open);
+  }
+
+  /// "I copied the answer": the plan from the clipboard goes straight to the
+  /// preview; without one, the import screen opens for a paste by hand.
+  Future<void> _bringBack() async {
+    final plan = await copiedPlan(ref);
+    if (!mounted) return;
+    await Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => ImportScreen(initialText: plan?.text)));
   }
 
   @override
@@ -186,6 +207,26 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     final t = Theme.of(context).textTheme;
     final editing = widget.goalId != null;
     final title = editing ? ref.watch(goalViewProvider(widget.goalId!))?.goal.title : null;
+    Widget step(int n, String heading, List<Widget> body) => Card.outlined(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(radius: 14, child: Text('$n')),
+                const SizedBox(width: 12),
+                Expanded(child: Text(heading, style: t.titleMedium)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...body,
+          ],
+        ),
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -197,89 +238,103 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (title != null) ...[Text(title, style: t.titleLarge), const SizedBox(height: 12)],
+            if (title != null) ...[Text(title, style: t.titleLarge), const SizedBox(height: 8)],
             Text(
-              widget.look
-                  ? '1. Say how the screen and widgets should look.'
-                  : (editing ? '1. Say what should change.' : '1. Say what you want to do.'),
-              style: t.titleMedium,
+              'Your AI chat makes the plan. Get On It shows it and keeps you on track. It takes 3 steps.',
+              style: t.bodyMedium,
             ),
-            const SizedBox(height: 8),
-            TextField(
-              key: const ValueKey('ask-request'),
-              controller: _request,
-              minLines: 2,
-              maxLines: 5,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: widget.look
-                    ? 'For example: a quick +1 button on the small widget'
-                    : editing
-                    ? 'For example: I missed a week. Give me a new pace.'
-                    : 'For example: read 2 pages of a book every day',
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('ask-howto'),
+                onPressed: () =>
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HowToVideoScreen())),
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Watch how (1 min)'),
               ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final idea in widget.look ? _lookIdeas : (editing ? _editIdeas : _ideas))
-                  ActionChip(label: Text(idea, maxLines: 1), onPressed: () => setState(() => _request.text = idea)),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text('2. Copy the prompt into an AI chat.', style: t.titleMedium),
             const SizedBox(height: 4),
-            Text(
-              widget.look
-                  ? 'The prompt holds your plan and its current design. The AI changes only the design; your plan and progress stay.'
-                  : editing
-                  ? 'The prompt holds your current plan and progress, and asks the AI to keep your progress.'
-                  : 'The prompt tells the AI exactly what Get On It can import. It works with any AI chat, for example ChatGPT or Claude.',
-              style: t.bodySmall,
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              key: const ValueKey('ask-copy'),
-              onPressed: _copy,
-              icon: const Icon(Icons.copy),
-              label: const Text('Copy prompt'),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('ask-claude'),
-                    onPressed: () => _copy(open: Uri.parse('https://claude.ai/new')),
-                    child: const Text('Copy and open Claude'),
+            step(
+              1,
+              widget.look ? 'Say how it should look' : (editing ? 'Say what should change' : 'Say what you want'),
+              [
+                TextField(
+                  key: const ValueKey('ask-request'),
+                  controller: _request,
+                  minLines: 2,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    hintText: widget.look
+                        ? 'For example: a quick +1 button on the small widget'
+                        : editing
+                        ? 'For example: I missed a week. Give me a new pace.'
+                        : 'For example: read 2 pages of a book every day',
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('ask-chatgpt'),
-                    onPressed: () => _copy(open: Uri.parse('https://chatgpt.com/')),
-                    child: const Text('Copy and open ChatGPT'),
-                  ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final idea in widget.look ? _lookIdeas : (editing ? _editIdeas : _ideas))
+                      ActionChip(label: Text(idea, maxLines: 1), onPressed: () => setState(() => _request.text = idea)),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Text('3. Copy the whole answer and import it.', style: t.titleMedium),
-            const SizedBox(height: 8),
-            FilledButton.tonalIcon(
-              key: const ValueKey('ask-import'),
-              onPressed: () =>
-                  Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ImportScreen())),
-              icon: const Icon(Icons.content_paste),
-              label: Text(
+            step(2, 'Ask your AI', [
+              Text(
                 widget.look
-                    ? 'I have the answer: apply the new look'
-                    : (editing ? 'I have the answer: update the plan' : 'I have the answer: import it'),
+                    ? 'The app copies a prompt with your plan and its design. The AI changes only the design.'
+                    : editing
+                    ? 'The app copies a prompt with your plan and progress. The AI keeps your progress.'
+                    : 'The app copies a prompt that tells the AI what Get On It needs.',
+                style: t.bodySmall,
               ),
-            ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                key: const ValueKey('ask-chatgpt'),
+                onPressed: () => _copy(open: Uri.parse('https://chatgpt.com/')),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open ChatGPT'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                key: const ValueKey('ask-claude'),
+                onPressed: () => _copy(open: Uri.parse('https://claude.ai/new')),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open Claude'),
+              ),
+              const SizedBox(height: 8),
+              Text('In the chat, paste the prompt with a long press, then send it.', style: t.bodyMedium),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('ask-copy'),
+                  onPressed: _copy,
+                  icon: const Icon(Icons.copy, size: 18),
+                  label: const Text('Copy prompt only, for another AI chat'),
+                ),
+              ),
+            ]),
+            step(3, 'Bring the plan back', [
+              Text(
+                'When the answer is ready, tap Copy under the answer, or Share → Get On It. Then come back here.',
+                style: t.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text('Copy the whole answer. Get On It finds the plan in it and shows it to you.', style: t.bodySmall),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const ValueKey('ask-import'),
+                onPressed: _bringBack,
+                icon: const Icon(Icons.content_paste),
+                label: Text(
+                  widget.look ? 'I copied the answer: show the new look' : 'I copied the answer: show the plan',
+                ),
+              ),
+            ]),
           ],
         ),
       ),
