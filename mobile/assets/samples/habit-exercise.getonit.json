@@ -1,0 +1,50 @@
+{
+  "kind": "goal",
+  "schemaVersion": "1.0",
+  "id": "exercise-week",
+  "template": "habit@1",
+  "title": "Exercise 4 days a week",
+  "icon": "💪",
+  "accent": "#22c55e",
+  "reminders": {
+    "preset": "gentle",
+    "time": "18:30"
+  },
+  "data": {
+    "mode": "checklist",
+    "steps": [
+      {
+        "id": "push-ups",
+        "title": "Push-ups",
+        "detail": "3 × 15",
+        "days": [
+          "mon"
+        ]
+      },
+      {
+        "id": "squats",
+        "title": "Squats",
+        "detail": "3 × 20",
+        "days": [
+          "wed"
+        ]
+      },
+      {
+        "id": "plank",
+        "title": "Plank",
+        "detail": "3 × 1 min",
+        "days": [
+          "fri"
+        ]
+      },
+      {
+        "id": "run",
+        "title": "Run",
+        "detail": "20 min",
+        "days": [
+          "sat"
+        ]
+      }
+    ]
+  }
+}

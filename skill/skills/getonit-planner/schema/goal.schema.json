@@ -499,6 +499,24 @@
               "title": {
                 "type": "string",
                 "minLength": 1
+              },
+              "days": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "enum": [
+                    "mon",
+                    "tue",
+                    "wed",
+                    "thu",
+                    "fri",
+                    "sat",
+                    "sun"
+                  ]
+                }
+              },
+              "detail": {
+                "type": "string"
               }
             }
           }

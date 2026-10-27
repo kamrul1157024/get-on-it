@@ -6,6 +6,12 @@ const supportedSchemaMajor = 1;
 
 const _weekdays = {'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6, 'sun': 7};
 
+/// Weekday numbers (1 = Monday) for names like "mon".
+Set<int> weekdaysOf(List<Object?> names) => {
+  for (final d in names)
+    if (_weekdays[d] != null) _weekdays[d]!,
+};
+
 /// A goal document. Spec §5.3.
 class GoalDoc {
   GoalDoc(this.json);
@@ -26,14 +32,17 @@ class GoalDoc {
 
   Map<String, Object?>? get reminders => (json['reminders'] as Map?)?.cast<String, Object?>();
 
-  /// Scheduled weekdays, 1 = Monday. Every day when the goal sets none.
+  /// Scheduled weekdays, 1 = Monday. Without a schedule, checklist steps
+  /// that name their days (an exercise per weekday) set it: the other days
+  /// are rest days. Otherwise every day.
   Set<int> get scheduleDays {
     final days = (json['schedule'] as Map?)?['days'];
-    if (days is! List || days.isEmpty) return {1, 2, 3, 4, 5, 6, 7};
-    return {
-      for (final d in days)
-        if (_weekdays[d] != null) _weekdays[d]!,
+    if (days is List && days.isNotEmpty) return weekdaysOf(days);
+    final stepDays = {
+      for (final s in (data['steps'] as List? ?? const []))
+        if (s is Map && s['days'] is List) ...weekdaysOf(s['days'] as List),
     };
+    return stepDays.isEmpty ? {1, 2, 3, 4, 5, 6, 7} : stepDays;
   }
 
   /// The `goal` key of the render scope. Spec §6.1.

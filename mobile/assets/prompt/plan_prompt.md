@@ -7,7 +7,7 @@ The user wants:
 {{request}}
 """
 
-Reply with ONE JSON code block only (a goal, or a bundle with a custom template and a goal), then at most two short sentences. No other code blocks.
+Reply with ONE JSON code block only, then at most two short sentences. No other code blocks. The block holds one goal, or a bundle when there is more than one document: {"kind": "bundle", "schemaVersion": "1.0", "documents": [ ... ]}.
 
 # The document
 
@@ -41,6 +41,8 @@ habit@1: a daily habit. "data.mode" is one of:
 - "count": {"mode": "count", "unit": "glasses", "target": 8, "period": "day"}  ("period" can be "week")
 - "check": {"mode": "check"}  or, for something to avoid, {"mode": "check", "avoid": true}
 - "checklist": {"mode": "checklist", "steps": [{"id": "stretch", "title": "Stretch"}, {"id": "journal", "title": "Journal"}]}
+- A different task on different days (an exercise plan): give each step "days" and an optional "detail". Each day shows only its own steps; days without steps are rest days.
+  {"mode": "checklist", "steps": [{"id": "push-ups", "title": "Push-ups", "detail": "3 × 15", "days": ["mon"]}, {"id": "squats", "title": "Squats", "detail": "3 × 20", "days": ["wed"]}, {"id": "plank", "title": "Plank", "detail": "3 × 1 min", "days": ["fri"]}, {"id": "run", "title": "Run", "detail": "20 min", "days": ["sat"]}]}
 
 # Example
 
@@ -58,7 +60,7 @@ habit@1: a daily habit. "data.mode" is one of:
 
 # Rules
 
-- Pick the template that fits best. If the request has several goals, make the most important one and say so.
+- Make one goal for each thing the user asks for. Several goals go in one bundle, each with its own "id". Pick the template that fits each goal best.
 - Make the pace realistic. Leave rest days for big goals.
 - Use a built-in template for a plain plan. Make a custom template when the user asks for a special screen or widget, or when the goal has links, tips or extra stats worth showing.
 - Use only the fields, components and actions above. Output valid JSON with double quotes and no comments.

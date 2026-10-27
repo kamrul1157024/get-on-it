@@ -65,7 +65,7 @@ void main() {
     expect(fakes.launched.length, launches, reason: 'Copy prompt only opens nothing');
   });
 
-  testWidgets('back from the AI chat: "Plan found" opens the preview, once per answer', (tester) async {
+  testWidgets('back from the AI chat: "Plan found" adds a clean plan and opens it, once per answer', (tester) async {
     await open(tester);
     await tapKey(tester, 'empty-ask');
     await tapText(tester, 'Drink 8 glasses of water a day');
@@ -79,11 +79,14 @@ void main() {
     await resume(tester);
     expect(found, findsOneWidget);
     expect(find.text('Plan found: Drink water'), findsOneWidget);
+    // A clean plan skips the import screen: it is saved, and its page opens.
     await tapKey(tester, 'plan-found-open');
-    await waitFor(tester, find.byKey(const ValueKey('import-confirm')));
-    expect(find.text('8 glasses per day'), findsOneWidget);
-    await tapKey(tester, 'import-confirm');
-    expect(find.text('Drink water'), findsOneWidget);
+    await waitFor(tester, find.byKey(const ValueKey('import-done')));
+    expect(find.byKey(const ValueKey('import-confirm')), findsNothing);
+    expect(find.text('Plan added.'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
+    // This plan proposes no reminders, so the plan page does not ask.
+    expect(find.byKey(const ValueKey('reminder-ask')), findsNothing);
 
     // The same answer again: not offered twice.
     await resume(tester);
@@ -100,6 +103,16 @@ void main() {
     await Clipboard.setData(ClipboardData(text: await answer()));
     await resume(tester);
     expect(found, findsOneWidget);
+    // Coming back with another answer while the sheet is open does not
+    // stack a second sheet.
+    await Clipboard.setData(ClipboardData(text: 'Another try:\n${await answer()}'));
+    await resume(tester);
+    expect(found, findsOneWidget);
+    await tapText(tester, 'Not now');
+    expect(found, findsNothing);
+    // The other answer was not shown yet: it comes once, on the next return.
+    await resume(tester);
+    expect(found, findsOneWidget);
     await tapText(tester, 'Not now');
     await resume(tester);
     expect(found, findsNothing);
@@ -112,7 +125,7 @@ void main() {
     expect(found, findsNothing);
   });
 
-  testWidgets('"I copied the answer" goes straight to the preview', (tester) async {
+  testWidgets('"I copied the answer" adds a clean plan at once', (tester) async {
     await open(tester);
     await tapKey(tester, 'empty-ask');
     await tapKey(tester, 'ask-chatgpt');
@@ -121,8 +134,8 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await settle(tester);
     await tapKey(tester, 'ask-import');
-    await waitFor(tester, find.byKey(const ValueKey('import-confirm')));
-    expect(find.text('8 glasses per day'), findsOneWidget);
+    await waitFor(tester, find.byKey(const ValueKey('import-done')));
+    expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
   });
 
   testWidgets('the import screen checks a pasted answer by itself', (tester) async {

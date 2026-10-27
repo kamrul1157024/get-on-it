@@ -11,6 +11,9 @@ Map<String, Object?> _mode(String mode) => {
   'isCount': mode == 'count',
   'isCheck': mode == 'check',
   'isChecklist': mode == 'checklist',
+  // Only a checklist with steps for some weekdays has rest days.
+  'hasStepsToday': false,
+  'restDay': false,
 };
 
 /// Sum of deltas toward a daily or weekly target. Spec §7.5.
@@ -129,10 +132,17 @@ class ChecklistEngine implements ProgressEngine {
     return '$n ${n == 1 ? 'step' : 'steps'}${goal.data['resets'] == 'never' ? '' : ' · daily'}';
   }
 
+  /// The steps for [day]: a step with "days" belongs only to those weekdays.
+  static List<Map<String, Object?>> stepsOn(List<Map<String, Object?>> steps, int day) => [
+    for (final s in steps)
+      if (s['days'] is! List || weekdaysOf(s['days'] as List).contains(DayClock.weekdayOf(day))) s,
+  ];
+
   @override
   Map<String, Object?> computeState(EngineContext c) {
-    final steps = _steps(c.data);
+    final all = _steps(c.data);
     final daily = c.data['resets'] != 'never';
+    final steps = daily ? stepsOn(all, c.today) : all;
     // Latest value per (day, step), and overall latest per step.
     final byDay = <int, Map<String, bool>>{};
     final latest = <String, bool>{};
@@ -148,11 +158,15 @@ class ChecklistEngine implements ProgressEngine {
     }
 
     bool doneOn(String step, int day) => daily ? (byDay[day]?[step] ?? false) : (latest[step] ?? false);
-    bool dayComplete(int day) =>
-        daily ? steps.isNotEmpty && steps.every((s) => doneOn(s['id'] as String, day)) : touched.contains(day);
+    bool dayComplete(int day) {
+      if (!daily) return touched.contains(day);
+      final due = stepsOn(all, day);
+      return due.isNotEmpty && due.every((s) => doneOn(s['id'] as String, day));
+    }
 
     final stepStates = [
-      for (final s in steps) {'id': s['id'], 'title': s['title'], 'done': doneOn(s['id'] as String, c.today)},
+      for (final s in steps)
+        {'id': s['id'], 'title': s['title'], 'done': doneOn(s['id'] as String, c.today), 'detail': s['detail']},
     ];
     final doneCount = stepStates.where((s) => s['done'] == true).length;
 
@@ -167,6 +181,9 @@ class ChecklistEngine implements ProgressEngine {
       'steps': stepStates,
       'doneCount': doneCount,
       'label': '$doneCount / ${steps.length}',
+      // A day with no steps for it is a rest day.
+      'restDay': daily && steps.isEmpty && all.isNotEmpty,
+      'hasStepsToday': steps.isNotEmpty,
     };
   }
 }

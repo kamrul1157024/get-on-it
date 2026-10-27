@@ -109,6 +109,23 @@ class Repository {
     return true;
   }
 
+  /// Puts back an exact template version, also an older one: for Undo.
+  Future<void> restoreTemplate(TemplateDoc t) => db
+      .into(db.templates)
+      .insertOnConflictUpdate(
+        TemplatesCompanion.insert(
+          id: t.id,
+          major: t.major,
+          version: t.version,
+          json: t.encode(),
+          source: 'imported',
+          installedAt: _clock(),
+        ),
+      );
+
+  Future<void> deleteTemplate(String id, int major) =>
+      (db.delete(db.templates)..where((r) => r.id.equals(id) & r.major.equals(major))).go();
+
   // Goals -------------------------------------------------------------------
 
   Stream<List<StoredGoal>> watchGoals() =>
@@ -169,7 +186,7 @@ class Repository {
   }
 
   /// Settings that belong to one goal: `<prefix><goalId>`.
-  static const goalSettingPrefixes = ['reminders.on.'];
+  static const goalSettingPrefixes = ['reminders.on.', 'reminders.asked.'];
 
   Future<void> deleteGoal(String id) => db.transaction(() async {
     await (db.delete(db.goals)..where((g) => g.id.equals(id))).go();

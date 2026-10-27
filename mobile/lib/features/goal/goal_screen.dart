@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../render/goal_surface.dart';
 import '../import/ask_ai_screen.dart';
+import '../../core/time/clock_format.dart';
+import '../reminders/planner.dart';
 import '../reminders/reminder_labels.dart';
 import '../reminders/reminders_controller.dart';
 
@@ -75,8 +77,74 @@ class GoalScreen extends ConsumerWidget {
           ? const SizedBox.shrink()
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              children: [GoalSurface(goalId: goalId, surface: 'screen')],
+              children: [
+                _ReminderAsk(goalId: goalId),
+                GoalSurface(goalId: goalId, surface: 'screen'),
+              ],
             ),
+    );
+  }
+}
+
+/// "Turn on reminders at 7:00 PM?" once, for a plan that proposes reminders
+/// and has them off. The import screen used to ask this.
+class _ReminderAsk extends ConsumerWidget {
+  const _ReminderAsk({required this.goalId});
+
+  final String goalId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final view = ref.watch(goalViewProvider(goalId));
+    final settings = ref.watch(settingsProvider).value;
+    final steps = view == null ? const [] : ladderOf(view.goal);
+    if (settings == null ||
+        steps.isEmpty ||
+        settings[reminderSettingKey(goalId)] == 'true' ||
+        settings['reminders.asked.$goalId'] == 'true') {
+      return const SizedBox.shrink();
+    }
+    Future<void> answer(bool on) async {
+      await ref.read(repositoryProvider).setSetting('reminders.asked.$goalId', 'true');
+      if (on) await ref.read(remindersProvider.notifier).setEnabled(goalId, true);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card.filled(
+        key: const ValueKey('reminder-ask'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Turn on reminders at ${clockOf(context, steps.first.minuteOfDay)}?',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(
+                ladderDescription(view!.goal, use24h: MediaQuery.alwaysUse24HourFormatOf(context)),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    key: const ValueKey('reminder-ask-no'),
+                    onPressed: () => answer(false),
+                    child: const Text('No'),
+                  ),
+                  FilledButton.tonal(
+                    key: const ValueKey('reminder-ask-yes'),
+                    onPressed: () => answer(true),
+                    child: const Text('Yes'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

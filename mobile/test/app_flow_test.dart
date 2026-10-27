@@ -203,7 +203,7 @@ void main() {
     await run(tester, (f) => editAiFlow(tester, f));
   });
 
-  testWidgets('a shared plan opens the import preview', (tester) async {
+  testWidgets('a shared clean plan is added at once and its page opens', (tester) async {
     const channel = MethodChannel('app.getonit/intents');
     // Read before start(), so the asset cache from the last test must go first.
     rootBundle.clear();
@@ -214,14 +214,13 @@ void main() {
     );
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
     await start(tester, listenForIntents: true);
-    expect(find.text('Import a plan'), findsWidgets);
-    expect(find.text('8 glasses per day'), findsOneWidget);
-    await tapKey(tester, 'import-confirm');
-    expect(find.text('Drink water'), findsOneWidget);
+    await waitFor(tester, find.byKey(const ValueKey('import-done')));
+    expect(find.byKey(const ValueKey('import-confirm')), findsNothing);
+    expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
     await stop(tester);
   });
 
-  testWidgets('a plan shared while the import screen is open lands on Today after import', (tester) async {
+  testWidgets('a plan shared while the import screen is open replaces it with the plan page', (tester) async {
     await start(tester, listenForIntents: true);
     await tapKey(tester, 'empty-import');
     await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
@@ -229,9 +228,8 @@ void main() {
       const StandardMethodCodec().encodeMethodCall(MethodCall('onText', await sampleText('habit-water.getonit.json'))),
       (_) {},
     );
-    await settle(tester);
-    await tapKey(tester, 'import-confirm');
-    expect(find.text('Drink water'), findsOneWidget);
+    await waitFor(tester, find.byKey(const ValueKey('import-done')));
+    expect(find.widgetWithText(AppBar, 'Drink water'), findsOneWidget);
     expect(find.byKey(const ValueKey('import-text')), findsNothing, reason: 'no empty import screen is left behind');
     await stop(tester);
   });

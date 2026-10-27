@@ -40,7 +40,7 @@ FENCE = re.compile(r"```(?:json)?\s*\n([\s\S]*?)\n?```")
 
 WEEKDAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 COMPONENTS = {
-    "column", "row", "card", "grid", "list", "section", "divider", "spacer",
+    "column", "row", "card", "grid", "list", "section", "more", "divider", "spacer",
     "text", "icon", "image", "badge", "stat", "progress_bar", "progress_ring",
     "week_dots", "heatmap", "media",
     "button", "checklist_item", "counter", "number_input",
