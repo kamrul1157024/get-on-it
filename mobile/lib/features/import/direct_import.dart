@@ -125,6 +125,9 @@ Future<void> importOrReview(BuildContext context, WidgetRef ref, String text) as
       SnackBar(
         key: const ValueKey('import-done'),
         duration: const Duration(seconds: 8),
+        // With an action, a SnackBar would stay until closed; Undo is only
+        // offered for a moment.
+        persist: false,
         content: Text(n > 1 ? '$n goals added.' : (updated ? 'Plan updated.' : 'Plan added.')),
         action: SnackBarAction(key: const ValueKey('import-undo'), label: 'Undo', onPressed: undo),
       ),

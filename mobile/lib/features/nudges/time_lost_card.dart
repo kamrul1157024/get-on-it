@@ -46,6 +46,8 @@ class _TimeLostCardState extends ConsumerState<TimeLostCard> {
         SnackBar(
           content: Text('${app.label} no longer counts as lost time'),
           action: SnackBarAction(label: 'Undo', onPressed: () => c.setExcluded(before)),
+          // Without this, a SnackBar with an action stays until closed.
+          persist: false,
         ),
       );
   }

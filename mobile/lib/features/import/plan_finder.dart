@@ -89,7 +89,20 @@ Future<void> markPlanSeenIn(Repository repo, String text) async {
 /// On return from the AI chat: "Plan found: <title>. See plan". Once per
 /// answer, and only while the plan flow is armed.
 Future<void> offerCopiedPlan(BuildContext context, WidgetRef ref) async {
-  if (!ref.read(planFinderEnabledProvider)) return;
+  if (!ref.read(planFinderEnabledProvider) || _offering) return;
+  _offering = true;
+  try {
+    await _offer(context, ref);
+  } finally {
+    _offering = false;
+  }
+}
+
+/// True while a "Plan found" sheet is open: coming back to the app again
+/// must not stack a second one on top.
+bool _offering = false;
+
+Future<void> _offer(BuildContext context, WidgetRef ref) async {
   final repo = ref.read(repositoryProvider);
   final s = await repo.settings();
   final until = DateTime.tryParse(s[_armedKey] ?? '');

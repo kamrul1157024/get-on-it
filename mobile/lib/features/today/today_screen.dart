@@ -41,6 +41,9 @@ class TodayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goals = ref.watch(goalsProvider);
+    // Started before the first goal arrives, so new goals draw their design
+    // at once instead of a plain card while the templates load.
+    ref.watch(templatesProvider);
     ref.watch(currentDayProvider);
     final t = Theme.of(context).textTheme;
     final list = goals.value ?? const [];

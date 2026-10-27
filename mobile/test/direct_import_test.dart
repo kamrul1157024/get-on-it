@@ -54,6 +54,15 @@ void main() {
     expect(find.text('No goals yet'), findsOneWidget);
   });
 
+  testWidgets('the Undo message goes away by itself', (tester) async {
+    await start(tester);
+    await share(tester, await sampleText('habit-water.getonit.json'));
+    expect(done, findsOneWidget);
+    await tester.pump(const Duration(seconds: 9));
+    await settle(tester);
+    expect(done, findsNothing);
+  });
+
   testWidgets('an update of the same goal says so, and Undo brings the old version back', (tester) async {
     await start(tester);
     final water = sample(await sampleText('habit-water.getonit.json'));

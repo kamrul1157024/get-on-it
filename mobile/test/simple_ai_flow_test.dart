@@ -103,6 +103,16 @@ void main() {
     await Clipboard.setData(ClipboardData(text: await answer()));
     await resume(tester);
     expect(found, findsOneWidget);
+    // Coming back with another answer while the sheet is open does not
+    // stack a second sheet.
+    await Clipboard.setData(ClipboardData(text: 'Another try:\n${await answer()}'));
+    await resume(tester);
+    expect(found, findsOneWidget);
+    await tapText(tester, 'Not now');
+    expect(found, findsNothing);
+    // The other answer was not shown yet: it comes once, on the next return.
+    await resume(tester);
+    expect(found, findsOneWidget);
     await tapText(tester, 'Not now');
     await resume(tester);
     expect(found, findsNothing);

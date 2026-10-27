@@ -20,6 +20,8 @@ class GoalSurface extends ConsumerWidget {
     final view = ref.watch(goalViewProvider(goalId));
     if (view == null) return const SizedBox.shrink();
     final tree = view.template?.surface(surface);
+    // Templates still loading: draw nothing rather than the "no view" card.
+    if (tree == null && !ref.watch(templatesProvider).hasValue) return const SizedBox.shrink();
     if (tree == null) {
       return fallback ??
           Card(
