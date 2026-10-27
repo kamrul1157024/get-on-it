@@ -36,6 +36,14 @@ class _SurfacePreviewState extends State<SurfacePreview> {
     }
   }
 
+  // A new check of the plan brings a new scope: report the layout again,
+  // even when the result is the same as before.
+  @override
+  void didUpdateWidget(SurfacePreview old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.scope, widget.scope) || !identical(old.tree, widget.tree)) _reported = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback(_probe);

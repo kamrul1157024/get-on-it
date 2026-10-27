@@ -14,10 +14,9 @@ The skill is in this repository:
 
 You do not need to install anything to make a plan:
 
-1. In the app, tap **Make a plan with AI**.
-2. Say what you want.
-3. Tap **Copy prompt**. Paste it into Claude, ChatGPT, or another chat.
-4. Copy the whole answer. In the app, tap **Import a plan**, then **Paste**.
+1. In the app, tap **Make a plan with AI**, and say what you want.
+2. Tap **Open ChatGPT** or **Open Claude** (or **Copy prompt only** for another chat). Paste the prompt in the chat with a long press, and send it.
+3. Tap **Copy** under the answer, and come back. Get On It finds the plan and shows it. Tap **Import**.
 
 To change a plan, open the goal and tap **⋮ → Change plan with AI**. The prompt contains the plan and your progress, and it tells the AI to keep the IDs, so your progress stays.
 

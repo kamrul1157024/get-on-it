@@ -43,7 +43,8 @@ The app uses the internet only to:
 
 - play or open YouTube videos that are in your plans,
 - open web links that are in your plans,
-- open an AI chat website when you tap "Copy and open", and
+- open an AI chat app or website when you tap "Open ChatGPT" or "Open Claude",
+- read the clipboard when you come back from the AI chat, to find the plan you copied (only after you tap one of those buttons, and only for 2 hours), and
 - in the version from GitHub (not the Google Play version), check GitHub for a new version.
 
 These services have their own privacy policies. The app sends them no data about you beyond what opening the page needs.
