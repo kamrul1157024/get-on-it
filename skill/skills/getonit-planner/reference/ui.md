@@ -52,6 +52,7 @@ Layout:
 - grid: children, columns (1–6), gap; a child may have "span"
 - list: items ("{{state.items}}" or "{{data.<list>}}"), item (one node, repeated), as, gap, maxItems
 - section: title, child
+- more: title (default "More"), child. Closed until the user taps it; put details here (lists, links, tips, heatmap) to keep the screen calm.
 - divider
 - spacer: size
 
@@ -91,7 +92,7 @@ Composition:
 
 ## Widget rules
 
-- Widgets cannot show heatmap, image, section or number_input. Use them only in "screen".
+- Widgets cannot show heatmap, image, section, more or number_input. Use them only in "screen".
 - In widgets, buttons with mark_done, toggle_done and log_progress work without opening the app. Other actions open the app.
 - Give the widget card "action": open_goal, so a tap opens the goal.
 

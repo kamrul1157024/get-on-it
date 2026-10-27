@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/nudges/time_lost_card.dart';
 import '../features/import/plan_finder.dart';
+import '../features/import/direct_import.dart';
 import '../features/permissions/permission_prompt.dart';
 import '../features/update/update_dialog.dart';
 import '../features/drive/drive_controller.dart';
@@ -149,7 +150,8 @@ class _GetOnItAppState extends ConsumerState<GetOnItApp> with WidgetsBindingObse
       }
       return;
     }
-    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => ImportScreen(initialText: text)));
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null) importOrReview(ctx, ref, text);
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -227,7 +229,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
             const SizedBox(height: 16),
             if (parsed != null && parsed.errors.isNotEmpty) ...[
-              _Errors(parsed.issues),
+              _Errors(parsed.issues, titles: documentTitles(_text.text)),
               _FixWithAi(problems: _problems, answer: _text.text),
             ],
             if (parsed != null && parsed.ok) ...[
@@ -271,15 +273,40 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 }
 
+/// The title of each document in a bundle, by its index: errors in a plan
+/// with several goals are shown under the goal they belong to.
+Map<int, String> documentTitles(String text) {
+  try {
+    final json = jsonDecode(extractJson(text));
+    if (json is! Map || json['documents'] is! List) return const {};
+    final docs = json['documents'] as List;
+    return {
+      for (var i = 0; i < docs.length; i++)
+        if (docs[i] is Map) i: '${(docs[i] as Map)['title'] ?? (docs[i] as Map)['id'] ?? 'Part ${i + 1}'}',
+    };
+  } on FormatException {
+    return const {};
+  }
+}
+
+final _docIndex = RegExp(r'^documents\[(\d+)\]');
+
 class _Errors extends StatelessWidget {
-  const _Errors(this.issues);
+  const _Errors(this.issues, {this.titles = const {}});
 
   final List<ValidationIssue> issues;
+  final Map<int, String> titles;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = issues.map((i) => i.toString()).join('\n');
+    final groups = <String, List<String>>{};
+    for (final i in issues) {
+      final m = _docIndex.firstMatch(i.path);
+      final group = m == null ? '' : (titles[int.parse(m[1]!)] ?? 'Part ${int.parse(m[1]!) + 1}');
+      (groups[group] ??= []).add(i.toString());
+    }
+    final mono = TextStyle(color: scheme.onErrorContainer, fontFamily: 'monospace', fontSize: 12);
     return Card.filled(
       key: const ValueKey('import-errors'),
       color: scheme.errorContainer,
@@ -297,11 +324,16 @@ class _Errors extends StatelessWidget {
               'The details below are for the AI. Use "Fix with AI" to send them back to it.',
               style: TextStyle(color: scheme.onErrorContainer, fontSize: 12),
             ),
-            const SizedBox(height: 8),
-            SelectableText(
-              text,
-              style: TextStyle(color: scheme.onErrorContainer, fontFamily: 'monospace', fontSize: 12),
-            ),
+            for (final g in groups.entries) ...[
+              const SizedBox(height: 8),
+              if (g.key.isNotEmpty)
+                Text(
+                  g.key,
+                  key: ValueKey('import-errors-group:${g.key}'),
+                  style: TextStyle(color: scheme.onErrorContainer, fontWeight: FontWeight.w600),
+                ),
+              SelectableText(g.value.join('\n'), style: mono),
+            ],
           ],
         ),
       ),

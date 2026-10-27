@@ -2,114 +2,434 @@
   "kind": "template",
   "schemaVersion": "1.0",
   "id": "habit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Habit",
   "engine": "by_mode",
   "dataSchema": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["mode"],
+    "required": [
+      "mode"
+    ],
     "properties": {
-      "mode": { "enum": ["count", "check", "checklist"] },
-      "unit": { "type": "string" },
-      "target": { "type": "integer", "minimum": 1 },
-      "period": { "enum": ["day", "week"] },
-      "avoid": { "type": "boolean" },
-      "resets": { "enum": ["daily", "never"] },
+      "mode": {
+        "enum": [
+          "count",
+          "check",
+          "checklist"
+        ]
+      },
+      "unit": {
+        "type": "string"
+      },
+      "target": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "period": {
+        "enum": [
+          "day",
+          "week"
+        ]
+      },
+      "avoid": {
+        "type": "boolean"
+      },
+      "resets": {
+        "enum": [
+          "daily",
+          "never"
+        ]
+      },
       "steps": {
         "type": "array",
         "minItems": 1,
         "items": {
           "type": "object",
-          "required": ["id", "title"],
+          "required": [
+            "id",
+            "title"
+          ],
           "properties": {
-            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-            "title": { "type": "string", "minLength": 1 }
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "days": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ]
+              }
+            },
+            "detail": {
+              "type": "string"
+            }
           }
         }
       }
     },
     "allOf": [
-      { "if": { "properties": { "mode": { "const": "count" } } }, "then": { "required": ["target"] } },
-      { "if": { "properties": { "mode": { "const": "checklist" } } }, "then": { "required": ["steps"] } }
+      {
+        "if": {
+          "properties": {
+            "mode": {
+              "const": "count"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "target"
+          ]
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "mode": {
+              "const": "checklist"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "steps"
+          ]
+        }
+      }
     ]
   },
   "surfaces": {
     "screen": {
-      "type": "column", "gap": 16, "children": [
+      "type": "column",
+      "gap": 16,
+      "children": [
         {
-          "type": "card", "id": "count", "visible": "{{state.isCount}}",
-          "child": { "type": "row", "gap": 16, "children": [
-            { "type": "progress_ring", "value": "{{state.progress}}", "size": 96, "stroke": 10,
-              "label": "{{state.count}}", "sublabel": "of {{state.target}}" },
-            { "type": "column", "gap": 4, "expand": true, "children": [
-              { "type": "text", "style": "title", "value": "{{goal.title}}" },
-              { "type": "text", "style": "caption", "value": "{{state.label}} {{state.periodLabel}}" }
-            ]},
-            { "type": "counter",
-              "decrement": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": -1 } },
-              "increment": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": 1 } } }
-          ]}
+          "type": "card",
+          "id": "count",
+          "visible": "{{state.isCount}}",
+          "child": {
+            "type": "row",
+            "gap": 16,
+            "children": [
+              {
+                "type": "progress_ring",
+                "value": "{{state.progress}}",
+                "size": 88,
+                "stroke": 9,
+                "label": "{{state.count}}",
+                "sublabel": "of {{state.target}}"
+              },
+              {
+                "type": "text",
+                "style": "body",
+                "expand": true,
+                "value": "{{state.label}} {{state.periodLabel}}"
+              },
+              {
+                "type": "counter",
+                "decrement": {
+                  "type": "log_progress",
+                  "params": {
+                    "goalId": "{{goal.id}}",
+                    "delta": -1
+                  }
+                },
+                "increment": {
+                  "type": "log_progress",
+                  "params": {
+                    "goalId": "{{goal.id}}",
+                    "delta": 1
+                  }
+                }
+              }
+            ]
+          }
         },
         {
-          "type": "card", "id": "check", "visible": "{{state.isCheck}}",
-          "child": { "type": "column", "gap": 12, "children": [
-            { "type": "text", "style": "title", "value": "{{goal.title}}" },
-            { "type": "text", "style": "caption", "value": "{{state.progressLabel}}" },
-            { "type": "text", "style": "caption", "visible": "{{state.avoid}}", "value": "{{state.cleanDaysLabel}}" },
-            { "type": "button", "variant": "filled", "full": true, "label": "{{state.buttonLabel}}",
-              "action": { "type": "toggle_done", "params": { "goalId": "{{goal.id}}" } } }
-          ]}
+          "type": "card",
+          "id": "check",
+          "visible": "{{state.isCheck}}",
+          "child": {
+            "type": "column",
+            "gap": 12,
+            "children": [
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "{{state.progressLabel}}"
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "visible": "{{state.avoid}}",
+                "value": "{{state.cleanDaysLabel}}"
+              },
+              {
+                "type": "button",
+                "variant": "filled",
+                "full": true,
+                "label": "{{state.buttonLabel}}",
+                "action": {
+                  "type": "toggle_done",
+                  "params": {
+                    "goalId": "{{goal.id}}"
+                  }
+                }
+              }
+            ]
+          }
         },
         {
-          "type": "card", "id": "checklist", "visible": "{{state.isChecklist}}",
-          "child": { "type": "column", "gap": 8, "children": [
-            { "type": "row", "align": "between", "children": [
-              { "type": "text", "style": "title", "value": "{{goal.title}}" },
-              { "type": "badge", "label": "{{state.label}}", "tone": "neutral" }
-            ]},
-            { "type": "list", "items": "{{state.steps}}", "as": "st",
-              "item": { "type": "checklist_item", "label": "{{st.title}}", "checked": "{{st.done}}",
-                "action": { "type": "toggle_done", "params": { "goalId": "{{goal.id}}", "stepId": "{{st.id}}" } } } }
-          ]}
+          "type": "card",
+          "id": "checklist",
+          "visible": "{{state.hasStepsToday}}",
+          "child": {
+            "type": "column",
+            "gap": 4,
+            "children": [
+              {
+                "type": "row",
+                "align": "between",
+                "children": [
+                  {
+                    "type": "text",
+                    "style": "label",
+                    "value": "Today"
+                  },
+                  {
+                    "type": "badge",
+                    "label": "{{state.label}}",
+                    "tone": "neutral"
+                  }
+                ]
+              },
+              {
+                "type": "list",
+                "items": "{{state.steps}}",
+                "as": "st",
+                "item": {
+                  "type": "checklist_item",
+                  "label": "{{st.title}}",
+                  "sublabel": "{{st.detail}}",
+                  "checked": "{{st.done}}",
+                  "action": {
+                    "type": "toggle_done",
+                    "params": {
+                      "goalId": "{{goal.id}}",
+                      "stepId": "{{st.id}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
         },
         {
-          "type": "card", "id": "habit-stats",
-          "child": { "type": "column", "gap": 14, "children": [
-            { "type": "row", "align": "between", "children": [
-              { "type": "stat", "value": "{{state.streakLabel}}", "label": "Streak" },
-              { "type": "stat", "value": "{{state.pctLabel}}", "label": "Today" }
-            ]},
-            { "type": "week_dots", "days": "{{state.week}}" }
-          ]}
+          "type": "card",
+          "id": "rest",
+          "style": "tonal",
+          "visible": "{{state.restDay}}",
+          "child": {
+            "type": "column",
+            "gap": 4,
+            "children": [
+              {
+                "type": "text",
+                "style": "subtitle",
+                "value": "Rest day 😌"
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "Nothing planned today. Rest well."
+              }
+            ]
+          }
         },
-        { "type": "section", "title": "Last 12 weeks", "child": { "type": "heatmap", "cells": "{{state.heatmap}}" } }
+        {
+          "type": "card",
+          "style": "outlined",
+          "id": "progress",
+          "child": {
+            "type": "row",
+            "gap": 12,
+            "children": [
+              {
+                "type": "progress_ring",
+                "value": "{{state.progress}}",
+                "size": 48,
+                "stroke": 5,
+                "label": "{{state.pctLabel}}"
+              },
+              {
+                "type": "column",
+                "gap": 2,
+                "expand": true,
+                "children": [
+                  {
+                    "type": "text",
+                    "style": "body",
+                    "value": "{{state.progressLabel}}"
+                  },
+                  {
+                    "type": "text",
+                    "style": "caption",
+                    "value": "🔥 {{state.streakLabel}} streak"
+                  }
+                ]
+              },
+              {
+                "type": "badge",
+                "visible": "{{state.pace.label}}",
+                "label": "{{state.pace.label}}",
+                "tone": "{{state.pace.tone}}"
+              }
+            ]
+          }
+        },
+        {
+          "type": "more",
+          "title": "More",
+          "child": {
+            "type": "column",
+            "gap": 14,
+            "children": [
+              {
+                "type": "week_dots",
+                "days": "{{state.week}}"
+              },
+              {
+                "type": "section",
+                "title": "Last 12 weeks",
+                "child": {
+                  "type": "heatmap",
+                  "cells": "{{state.heatmap}}"
+                }
+              }
+            ]
+          }
+        }
       ]
     },
     "tile_wide": {
-      "type": "card", "accent": "{{goal.accent}}",
-      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
-      "child": { "type": "row", "gap": 12, "children": [
-        { "type": "icon", "name": "{{goal.icon}}", "box": true },
-        { "type": "column", "gap": 2, "expand": true, "children": [
-          { "type": "text", "style": "subtitle", "value": "{{goal.title}}", "maxLines": 1 },
-          { "type": "text", "style": "caption", "value": "{{state.progressLabel}}" }
-        ]},
-        { "type": "counter", "visible": "{{state.isCount}}",
-          "decrement": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": -1 } },
-          "increment": { "type": "log_progress", "params": { "goalId": "{{goal.id}}", "delta": 1 } } },
-        { "type": "button", "variant": "tonal", "visible": "{{state.isCheck}}", "label": "{{state.buttonLabel}}",
-          "action": { "type": "toggle_done", "params": { "goalId": "{{goal.id}}" } } },
-        { "type": "badge", "visible": "{{state.isChecklist}}", "label": "{{state.label}}", "tone": "neutral" }
-      ]}
+      "type": "card",
+      "accent": "{{goal.accent}}",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "{{goal.id}}"
+        }
+      },
+      "child": {
+        "type": "row",
+        "gap": 12,
+        "children": [
+          {
+            "type": "icon",
+            "name": "{{goal.icon}}",
+            "box": true
+          },
+          {
+            "type": "column",
+            "gap": 2,
+            "expand": true,
+            "children": [
+              {
+                "type": "text",
+                "style": "subtitle",
+                "value": "{{goal.title}}",
+                "maxLines": 1
+              },
+              {
+                "type": "text",
+                "style": "caption",
+                "value": "{{state.progressLabel}}"
+              }
+            ]
+          },
+          {
+            "type": "counter",
+            "visible": "{{state.isCount}}",
+            "decrement": {
+              "type": "log_progress",
+              "params": {
+                "goalId": "{{goal.id}}",
+                "delta": -1
+              }
+            },
+            "increment": {
+              "type": "log_progress",
+              "params": {
+                "goalId": "{{goal.id}}",
+                "delta": 1
+              }
+            }
+          },
+          {
+            "type": "button",
+            "variant": "tonal",
+            "visible": "{{state.isCheck}}",
+            "label": "{{state.buttonLabel}}",
+            "action": {
+              "type": "toggle_done",
+              "params": {
+                "goalId": "{{goal.id}}"
+              }
+            }
+          },
+          {
+            "type": "badge",
+            "visible": "{{state.isChecklist}}",
+            "label": "{{state.label}}",
+            "tone": "neutral"
+          }
+        ]
+      }
     },
     "tile": {
-      "type": "card", "style": "tile", "accent": "{{goal.accent}}",
-      "action": { "type": "open_goal", "params": { "goalId": "{{goal.id}}" } },
-      "child": { "type": "column", "gap": 6, "align": "center", "children": [
-        { "type": "progress_ring", "value": "{{state.progress}}", "size": 56, "stroke": 6, "label": "{{goal.icon}}" },
-        { "type": "text", "style": "caption", "value": "{{state.progressLabel}}", "maxLines": 1 }
-      ]}
+      "type": "card",
+      "style": "tile",
+      "accent": "{{goal.accent}}",
+      "action": {
+        "type": "open_goal",
+        "params": {
+          "goalId": "{{goal.id}}"
+        }
+      },
+      "child": {
+        "type": "column",
+        "gap": 6,
+        "align": "center",
+        "children": [
+          {
+            "type": "progress_ring",
+            "value": "{{state.progress}}",
+            "size": 56,
+            "stroke": 6,
+            "label": "{{goal.icon}}"
+          },
+          {
+            "type": "text",
+            "style": "caption",
+            "value": "{{state.progressLabel}}",
+            "maxLines": 1
+          }
+        ]
+      }
     }
   }
 }

@@ -14,6 +14,7 @@ final Map<String, ComponentBuilder> componentBuilders = {
   'grid': _grid,
   'list': _list,
   'section': _section,
+  'more': (n, rc) => _More(node: n, rc: rc),
   'divider': (n, rc) => const Divider(height: 1),
   'spacer': (n, rc) => SizedBox.square(dimension: n.number('size', rc.scope) ?? 8),
   'text': _text,
@@ -616,6 +617,48 @@ Widget _embed(Map<String, Object?> n, RenderContext rc) {
     );
   }
   return buildNode(found.tree, rc.withScope(found.scope));
+}
+
+/// Details that stay out of the way: closed until tapped.
+class _More extends StatefulWidget {
+  const _More({required this.node, required this.rc});
+
+  final Map<String, Object?> node;
+  final RenderContext rc;
+
+  @override
+  State<_More> createState() => _MoreState();
+}
+
+class _MoreState extends State<_More> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final title = widget.node.str('title', widget.rc.scope) ?? 'More';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          key: ValueKey('more:$title'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            child: Row(
+              children: [
+                Expanded(child: Text(title, style: t.titleSmall)),
+                Icon(_open ? Icons.expand_less : Icons.expand_more),
+              ],
+            ),
+          ),
+        ),
+        if (_open) buildNode(widget.node['child'], widget.rc),
+      ],
+    );
+  }
 }
 
 class _NumberInput extends StatefulWidget {

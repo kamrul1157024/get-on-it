@@ -8,6 +8,7 @@ import '../../core/schema/validator.dart';
 import '../../render/goal_surface.dart';
 import '../goal/goal_screen.dart';
 import '../import/ask_ai_screen.dart';
+import '../import/direct_import.dart';
 import '../import/import_screen.dart';
 import '../nudges/time_lost_card.dart';
 import '../settings/settings_screen.dart';
@@ -44,6 +45,7 @@ class TodayScreen extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final list = goals.value ?? const [];
     final done = list.where((g) => ref.watch(goalViewProvider(g.doc.id))?.state['todayComplete'] == true).length;
+    final highlighted = ref.watch(highlightedGoalsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,15 +79,19 @@ class TodayScreen extends ConsumerWidget {
                 const TimeLostCard(),
                 const SizedBox(height: 12),
                 for (final g in list) ...[
-                  GoalSurface(
-                    key: ValueKey('goal-tile:${g.doc.id}'),
-                    goalId: g.doc.id,
-                    surface: 'tile_wide',
-                    fallback: Card(
-                      child: ListTile(
-                        title: Text(g.doc.title),
-                        onTap: () =>
-                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => GoalScreen(goalId: g.doc.id))),
+                  _Highlight(
+                    on: highlighted.contains(g.doc.id),
+                    child: GoalSurface(
+                      key: ValueKey('goal-tile:${g.doc.id}'),
+                      goalId: g.doc.id,
+                      surface: 'tile_wide',
+                      fallback: Card(
+                        child: ListTile(
+                          title: Text(g.doc.title),
+                          onTap: () =>
+                              Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => GoalScreen(goalId: g.doc.id))),
+                        ),
                       ),
                     ),
                   ),
@@ -95,6 +101,25 @@ class TodayScreen extends ConsumerWidget {
             ),
     );
   }
+}
+
+/// An outline around goals that were just added, so the user sees them.
+class _Highlight extends StatelessWidget {
+  const _Highlight({required this.on, required this.child});
+
+  final bool on;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 300),
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: on ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
+    ),
+    child: child,
+  );
 }
 
 class _Empty extends StatelessWidget {

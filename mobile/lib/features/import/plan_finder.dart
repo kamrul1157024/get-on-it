@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/schema/validator.dart';
-import 'import_screen.dart';
+import '../../data/repository.dart';
+import 'direct_import.dart';
 
 /// Off in tests, where the shared clipboard would offer plans in other flows.
 final planFinderEnabledProvider = Provider<bool>((ref) => true);
@@ -51,18 +52,18 @@ FoundPlan? planIn(String? text) {
     return null;
   }
   if (json is! Map) return null;
-  final title = switch (json['kind']) {
-    'goal' => json['title'],
-    'bundle' =>
-      ((json['documents'] as List?) ?? const [])
-          .whereType<Map>()
-          .where((d) => d['kind'] == 'goal')
-          .map((d) => d['title'])
-          .firstOrNull,
-    _ => null,
-  };
   if (json['kind'] != 'goal' && json['kind'] != 'bundle') return null;
-  return FoundPlan(t, title is String && title.isNotEmpty ? title : 'your plan');
+  final goals = json['kind'] == 'goal'
+      ? [json]
+      : [
+          for (final d in (json['documents'] as List?) ?? const [])
+            if (d is Map && d['kind'] == 'goal') d,
+        ];
+  final first = goals.firstOrNull?['title'];
+  final title = goals.length > 1
+      ? '${goals.length} goals'
+      : (first is String && first.isNotEmpty ? first : 'your plan');
+  return FoundPlan(t, title);
 }
 
 String _hash(String text) => sha1.convert(utf8.encode(text)).toString();
@@ -77,8 +78,10 @@ Future<FoundPlan?> copiedPlan(WidgetRef ref) async {
 }
 
 /// Marks [text] as handled, so the same answer is not offered again.
-Future<void> markPlanSeen(WidgetRef ref, String text) async {
-  final repo = ref.read(repositoryProvider);
+Future<void> markPlanSeen(WidgetRef ref, String text) => markPlanSeenIn(ref.read(repositoryProvider), text);
+
+/// [markPlanSeen] without a screen: for work that outlives the screen.
+Future<void> markPlanSeenIn(Repository repo, String text) async {
   await repo.setSetting(_seenKey, _hash(text));
   await repo.setSetting(_armedKey, '');
 }
@@ -122,7 +125,5 @@ Future<void> offerCopiedPlan(BuildContext context, WidgetRef ref) async {
       ),
     ),
   );
-  if (open == true && context.mounted) {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ImportScreen(initialText: plan.text)));
-  }
+  if (open == true && context.mounted) await importOrReview(context, ref, plan.text);
 }

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../actions/action_router.dart';
 import '../../app/providers.dart';
 import 'howto_video.dart';
+import 'direct_import.dart';
 import 'import_screen.dart';
 import 'plan_finder.dart';
 
@@ -144,7 +145,8 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     'Finish the Stanford CS229 lectures on YouTube by 31 December, 3 days a week',
     'Read Atomic Habits (320 pages) by the end of next month',
     'Drink 8 glasses of water a day',
-    'A morning routine: stretch, journal, plan the day',
+    'Exercise 4 days a week: push-ups, squats, plank and a run on different days',
+    'Exercise, read Atomic Habits, and drink 8 glasses of water',
   ];
 
   @override
@@ -198,8 +200,8 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
   Future<void> _bringBack() async {
     final plan = await copiedPlan(ref);
     if (!mounted) return;
-    await Navigator.of(context)
-        .pushReplacement(MaterialPageRoute(builder: (_) => ImportScreen(initialText: plan?.text)));
+    if (plan != null) return importOrReview(context, ref, plan.text);
+    await Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ImportScreen()));
   }
 
   @override

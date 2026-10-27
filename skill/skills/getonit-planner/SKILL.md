@@ -33,6 +33,9 @@ Use a built-in template whenever one fits. The app already has them.
 | A daily yes/no habit | `habit@1`, `mode: "check"` | |
 | A habit to quit (a check means a slip) | `habit@1`, `mode: "check"`, `avoid: true` | `examples/habit-no-sugar.getonit.json` |
 | A short list of steps | `habit@1`, `mode: "checklist"` | `examples/habit-morning-routine.getonit.json` |
+| A different task on different days (an exercise plan) | `habit@1`, `mode: "checklist"`, steps with `days` and `detail` | `examples/habit-exercise-week.getonit.json` |
+
+**Several goals in one request are fine.** Make one goal for each thing the user asks for, and put them all in one bundle (`"kind": "bundle"`), each with its own `id`. The app adds them all in one step.
 
 The data rules for each template are in `templates/<name>.json` under `dataSchema`.
 

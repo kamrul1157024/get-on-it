@@ -5,7 +5,7 @@ abstract final class Capabilities {
 
   static const components = {
     // layout
-    'column', 'row', 'card', 'grid', 'list', 'section', 'divider', 'spacer',
+    'column', 'row', 'card', 'grid', 'list', 'section', 'more', 'divider', 'spacer',
     // display
     'text', 'icon', 'image', 'badge', 'stat', 'progress_bar', 'progress_ring',
     'week_dots', 'heatmap', 'media',

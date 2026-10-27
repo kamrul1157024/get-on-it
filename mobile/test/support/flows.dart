@@ -168,7 +168,10 @@ Future<void> bookFlow(WidgetTester tester) async {
   expect(find.text('p. 1–2'), findsWidgets);
   await tester.enterText(find.byKey(const ValueKey('number:page-reached')), '2');
   await tapText(tester, 'Save');
-  expect(find.text('Page 2 of 320 · Finish ≈ ${_finishDate()}'), findsOneWidget);
+  expect(find.text('Page 2 of 320'), findsWidgets);
+  // The finish date is a detail: it sits under "More".
+  await tapKey(tester, 'more:More');
+  expect(find.text('Finish ≈ ${_finishDate()}'), findsOneWidget);
   expect(find.text('✓ Done today'), findsOneWidget);
   expect(find.text('Mark today done'), findsNothing);
   await goBack(tester);
@@ -447,6 +450,9 @@ Future<void> courseScreenFlow(WidgetTester tester, Fakes fakes) async {
 
   // The owner does not allow these videos in other apps: they open on YouTube.
   expect(find.text('▶ Watch on YouTube'), findsOneWidget);
+  // The lecture list is a detail: it sits under "More".
+  expect(find.text('Lecture 3: Locally Weighted & Logistic Regression'), findsNothing);
+  await tapKey(tester, 'more:More');
   await tapText(tester, 'Lecture 3: Locally Weighted & Logistic Regression');
   expect(fakes.videos, isEmpty, reason: 'the in-app player does not open');
   expect(fakes.launched.last.toString(), 'https://www.youtube.com/watch?v=het9HFqo1TQ&t=0s');
