@@ -127,7 +127,7 @@ class _HowToVideoScreenState extends ConsumerState<HowToVideoScreen> {
     final ready = !_failed && c != null && c.value.isInitialized;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('How to make a plan with AI'),
+        title: const Text('How it works'),
         actions: [
           if (ready)
             IconButton(

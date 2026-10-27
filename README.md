@@ -10,7 +10,8 @@ Get On It is a goal and habit tracker for Android, built with Flutter. Any AI ch
   <tr>
     <td align="center">
       <video src="https://github.com/user-attachments/assets/421319c1-01c6-4632-852b-563a5e63eac0" controls width="260"></video><br>
-      <sub>Demo with narration (71 seconds). <a href="docs/demo.gif">Silent GIF</a></sub>
+      <sub>Demo with narration (71 seconds). <a href="docs/demo.gif">Silent GIF</a></sub><br>
+      <sub><a href="https://kamrul1157024.github.io/get-on-it/howto/ai-plan.mp4">How to make a plan with ChatGPT or Claude (40 s)</a></sub>
     </td>
     <td align="center">
       <a href="https://github.com/kamrul1157024/get-on-it/releases/latest/download/getonit.apk"><img src="docs/download-qr.png" width="200" alt="QR code: download getonit.apk"></a><br>
@@ -48,11 +49,11 @@ Get On It is not affiliated with or endorsed by OpenAI or Anthropic. ChatGPT and
 
 ### 1. No install: copy a prompt
 
-1. In the app, tap **Make a plan with AI**.
-2. Say what you want, for example "Finish the Stanford CS229 lectures by 31 December, 3 days a week".
-3. Tap **Copy prompt**, or **Copy and open Claude** / **Copy and open ChatGPT**.
-4. Paste the prompt into the chat. Copy the whole answer.
-5. In the app, tap **Import a plan**, then **Paste**, then **Import**.
+1. In the app, tap **Make a plan with AI**, and say what you want. For example: "Finish the Stanford CS229 lectures by 31 December, 3 days a week".
+2. Tap **Open ChatGPT** or **Open Claude**. The app copies the prompt. In the chat, paste it with a long press, and send it.
+3. When the answer is ready, tap **Copy** under it, and come back. Get On It finds the plan and shows "Plan found". Tap **See plan**, then **Import**.
+
+[Watch how (40 s)](https://kamrul1157024.github.io/get-on-it/howto/ai-plan.mp4)
 
 To change a plan later, open the goal, tap **⋮ → Change plan with AI**, and say what should change. The prompt contains your plan and your progress, so the update keeps your progress.
 
