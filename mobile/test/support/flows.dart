@@ -87,14 +87,21 @@ Future<void> tapKey(WidgetTester tester, String key) async {
   await settle(tester);
 }
 
+/// Opens the paste screen the way a user does: "Create plan" (or
+/// "New plan"), then "Already have a plan? Paste it".
+Future<void> openPasteScreen(WidgetTester tester) async {
+  // Already on the AI screen (back from an earlier paste): use its link.
+  if (find.byKey(const ValueKey('ask-paste')).evaluate().isEmpty) {
+    final empty = find.byKey(const ValueKey('empty-ask'));
+    await tapKey(tester, empty.evaluate().isNotEmpty ? 'empty-ask' : 'fab-new');
+  }
+  await waitSnackGone(tester);
+  await tapKey(tester, 'ask-paste');
+}
+
 /// Opens the import screen from the Today screen, pastes [json], checks it.
 Future<void> pastePlan(WidgetTester tester, String json) async {
-  final empty = find.byKey(const ValueKey('empty-import'));
-  if (empty.evaluate().isNotEmpty) {
-    await tapKey(tester, 'empty-import');
-  } else {
-    await tapKey(tester, 'fab-import');
-  }
+  await openPasteScreen(tester);
   await tester.enterText(find.byKey(const ValueKey('import-text')), json);
   await checkPlan(tester);
 }
@@ -559,7 +566,7 @@ Future<void> bookMarkTodayFlow(WidgetTester tester) async {
 /// errors to it.
 Future<void> clipboardFlow(WidgetTester tester) async {
   await Clipboard.setData(ClipboardData(text: await sampleText('habit-water.getonit.json')));
-  await tapKey(tester, 'empty-import');
+  await openPasteScreen(tester);
   await tapText(tester, 'Paste');
   await waitFor(tester, find.text('8 glasses per day'));
   expect(find.text('8 glasses per day'), findsOneWidget);
@@ -1011,7 +1018,7 @@ Future<void> askAiFlow(WidgetTester tester, Fakes fakes) async {
   final answer =
       'Here is your plan.\n\n```json\n${await sampleText('habit-water.getonit.json')}\n```\n\nImport it in Get On It.';
   await _snackGone(tester);
-  await tapKey(tester, 'ask-import');
+  await tapKey(tester, 'ask-paste');
   await tester.enterText(find.byKey(const ValueKey('import-text')), answer);
   await checkPlan(tester);
   expect(find.text('8 glasses per day'), findsOneWidget);
@@ -1039,7 +1046,7 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   final doc = (jsonDecode(await sampleText('course-cs229.getonit.json')) as Map).cast<String, Object?>();
   doc['deadline'] = '2027-01-14';
   await _snackGone(tester);
-  await tapKey(tester, 'ask-import');
+  await tapKey(tester, 'ask-paste');
   await tester.enterText(find.byKey(const ValueKey('import-text')), '```json\n${jsonEncode(doc)}\n```');
   await checkPlan(tester);
   expect(find.text('No changes to items. Your progress stays.'), findsOneWidget);
@@ -1073,7 +1080,7 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   ];
   doc['template'] = 'stanford-cs229-look@1';
   await _snackGone(tester);
-  await tapKey(tester, 'ask-import');
+  await tapKey(tester, 'ask-paste');
   await tester.enterText(
     find.byKey(const ValueKey('import-text')),
     jsonEncode({
@@ -1097,6 +1104,9 @@ Future<void> editAiFlow(WidgetTester tester, Fakes fakes) async {
   expect(find.text('1 of 21 videos'), findsWidgets);
   await goBack(tester);
 }
+
+/// Waits until a message bar no longer covers the bottom of the screen.
+Future<void> waitSnackGone(WidgetTester tester) => _snackGone(tester);
 
 /// The "Prompt copied" message covers the bottom of the screen for a few
 /// seconds, as for a real user.

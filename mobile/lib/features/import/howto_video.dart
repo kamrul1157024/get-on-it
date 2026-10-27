@@ -22,7 +22,7 @@ final howToAutoShowProvider = Provider<bool>((ref) => true);
 
 const _shownKey = 'howto.autoShown';
 
-/// The first time the user opens "Make a plan with AI", the video plays once
+/// The first time the user opens "Create a plan", the video plays once
 /// on its own. "Watch how" plays it again at any time.
 Future<void> showHowToOnce(BuildContext context, WidgetRef ref) async {
   if (!ref.read(howToAutoShowProvider)) return;

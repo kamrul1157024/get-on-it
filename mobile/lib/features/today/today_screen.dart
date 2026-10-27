@@ -9,7 +9,6 @@ import '../../render/goal_surface.dart';
 import '../goal/goal_screen.dart';
 import '../import/ask_ai_screen.dart';
 import '../import/direct_import.dart';
-import '../import/import_screen.dart';
 import '../nudges/time_lost_card.dart';
 import '../settings/settings_screen.dart';
 
@@ -35,8 +34,8 @@ class TodayScreen extends ConsumerWidget {
     }
   }
 
-  void _openImport(BuildContext context) =>
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportScreen()));
+  void _openAsk(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AskAiScreen()));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,15 +63,15 @@ class TodayScreen extends ConsumerWidget {
       floatingActionButton: list.isEmpty
           ? null
           : FloatingActionButton.extended(
-              key: const ValueKey('fab-import'),
-              onPressed: () => _openImport(context),
+              key: const ValueKey('fab-new'),
+              onPressed: () => _openAsk(context),
               icon: const Icon(Icons.add),
-              label: const Text('Import plan'),
+              label: const Text('Create plan'),
             ),
       body: goals.isLoading && list.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : list.isEmpty
-          ? _Empty(onImport: () => _openImport(context), onSamples: () => _addSamples(ref))
+          ? _Empty(onAsk: () => _openAsk(context), onSamples: () => _addSamples(ref))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
@@ -126,9 +125,9 @@ class _Highlight extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.onImport, required this.onSamples});
+  const _Empty({required this.onAsk, required this.onSamples});
 
-  final VoidCallback onImport;
+  final VoidCallback onAsk;
   final VoidCallback onSamples;
 
   @override
@@ -145,23 +144,16 @@ class _Empty extends StatelessWidget {
             Text('No goals yet', style: t.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Ask any AI chat for a plan, then paste or share it here.',
+              'Say what you want to do. Your AI chat makes the plan, and Get On It keeps you on track.',
               textAlign: TextAlign.center,
               style: t.bodyMedium,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              key: const ValueKey('empty-import'),
-              onPressed: onImport,
-              icon: const Icon(Icons.content_paste),
-              label: const Text('Import a plan'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
               key: const ValueKey('empty-ask'),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AskAiScreen())),
+              onPressed: onAsk,
               icon: const Icon(Icons.auto_awesome),
-              label: const Text('Make a plan with AI'),
+              label: const Text('Create plan'),
             ),
             const SizedBox(height: 8),
             TextButton(

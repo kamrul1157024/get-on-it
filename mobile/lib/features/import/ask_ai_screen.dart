@@ -196,12 +196,21 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
   }
 
   /// "I copied the answer": the plan from the clipboard goes straight to the
-  /// preview; without one, the import screen opens for a paste by hand.
+  /// preview; without one, a message says what to copy.
   Future<void> _bringBack() async {
     final plan = await copiedPlan(ref);
     if (!mounted) return;
     if (plan != null) return importOrReview(context, ref, plan.text);
-    await Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const ImportScreen()));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          persist: false,
+          content: Text(
+            'No plan in your clipboard yet. In your AI chat, tap Copy under the answer, then tap this button again.',
+          ),
+        ),
+      );
   }
 
   @override
@@ -231,9 +240,7 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.look ? 'Change the look with AI' : (editing ? 'Change this plan with AI' : 'Make a plan with AI'),
-        ),
+        title: Text(widget.look ? 'Change the look with AI' : (editing ? 'Change this plan with AI' : 'Create a plan')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -337,6 +344,17 @@ class _AskAiScreenState extends ConsumerState<AskAiScreen> {
                 ),
               ),
             ]),
+            // Plans from the Claude skill or a file, or when copying failed.
+            // Most people never need it.
+            Center(
+              child: TextButton(
+                key: const ValueKey('ask-paste'),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImportScreen())),
+                child: Text(editing ? 'Paste the answer by hand' : 'Already have a plan? Paste it'),
+              ),
+            ),
+            // Room under the last button, clear of the gesture bar.
+            const SizedBox(height: 48),
           ],
         ),
       ),

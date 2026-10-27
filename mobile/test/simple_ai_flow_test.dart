@@ -140,7 +140,7 @@ void main() {
 
   testWidgets('the import screen checks a pasted answer by itself', (tester) async {
     await open(tester);
-    await tapKey(tester, 'empty-import');
+    await openPasteScreen(tester);
     await tester.enterText(find.byKey(const ValueKey('import-text')), await answer());
     await tester.pump(const Duration(seconds: 1));
     await waitFor(tester, find.byKey(const ValueKey('import-confirm')));
@@ -168,5 +168,33 @@ void main() {
     await tapKey(tester, 'ask-howto');
     await waitFor(tester, find.byKey(const ValueKey('howto-fallback')));
     expect(find.byKey(const ValueKey('howto-skip')), findsNothing);
+  });
+
+  testWidgets('making a plan with AI is the way in; pasting by hand is a small link', (tester) async {
+    await open(tester);
+    // No paste box on the empty screen: the main button is the AI flow.
+    expect(find.byKey(const ValueKey('empty-import')), findsNothing);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('empty-ask'))).onPressed, isNotNull);
+    await tapKey(tester, 'empty-ask');
+    expect(find.text('Say what you want'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-text')), findsNothing);
+
+    // "I copied the answer" with no plan copied says what to do.
+    await Clipboard.setData(const ClipboardData(text: 'Sure! Here is some advice.'));
+    await tapKey(tester, 'ask-import');
+    expect(find.textContaining('No plan in your clipboard yet'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-text')), findsNothing);
+
+    // Plans from a file or the skill: the small link at the bottom.
+    await waitSnackGone(tester);
+    await tapKey(tester, 'ask-paste');
+    expect(find.byKey(const ValueKey('import-text')), findsOneWidget);
+  });
+
+  testWidgets('"New plan" on Today opens the AI flow', (tester) async {
+    await open(tester);
+    await tapKey(tester, 'empty-samples');
+    await tapKey(tester, 'fab-new');
+    expect(find.text('Say what you want'), findsOneWidget);
   });
 }
