@@ -19,16 +19,21 @@ Copy these texts into Play Console. The limits are Google's.
 ```
 Get On It helps you finish what you start. Do the thing.
 
-Make a plan with any AI chat
-Tell Get On It what you want to do: finish a course on YouTube, read a book, or build a habit. The app gives you a prompt. Paste it into any AI chat, for example ChatGPT or Claude, and paste the answer back. Get On It checks the plan and shows you the real goal screen and widgets before it saves anything. If something is wrong, "Fix with AI" copies a prompt with the exact problems.
+Create a plan in 3 steps
+1. Say what you want: finish a YouTube course, read a book, exercise 4 days a week, drink more water. Ask for several things at once if you like.
+2. Tap "Open ChatGPT" or "Open Claude". Get On It copies a prompt for you. Paste it and send it. Any AI chat works.
+3. Copy the answer and come back. Get On It finds the plan and adds it. One tap undoes it.
+A short video in the app shows you how.
 
 Get On It contains no AI. You use your own AI chat.
 
 Courses, books and habits
 - Watch course videos from where you stopped.
 - Read today's pages of a book or a PDF.
+- Plan a different exercise for each day. You see only today's.
 - Count glasses of water, tick a checklist, or keep a "do not" habit.
-- See your streak, your pace against your deadline, and today's work.
+- See your streak, your pace against your deadline, and today's task first.
+- Want a different look? Ask your AI: "make it pink with a big streak counter".
 
 Time lost
 With your permission, Get On It shows how much time social, video and game apps took today, this month and this year, and what that time could have been: "That could have been 13 lectures." This data stays on your phone.

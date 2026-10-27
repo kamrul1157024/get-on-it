@@ -222,7 +222,7 @@ void main() {
 
   testWidgets('a plan shared while the import screen is open replaces it with the plan page', (tester) async {
     await start(tester, listenForIntents: true);
-    await tapKey(tester, 'empty-import');
+    await openPasteScreen(tester);
     await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
       'app.getonit/intents',
       const StandardMethodCodec().encodeMethodCall(MethodCall('onText', await sampleText('habit-water.getonit.json'))),
